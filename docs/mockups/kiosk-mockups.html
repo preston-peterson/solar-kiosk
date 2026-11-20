@@ -1,0 +1,686 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar kiosk mockups</title>
+<style>
+:root{
+  color-scheme:light;
+  --plane:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --gridline:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+  --solar:#eda100; --home:#2a78d6; --batt:#1baf7a; --gridc:#6250d6;
+  --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --bar:#ffffff; --bar-ink:#0b0b0b; --bar-line:rgba(11,11,11,.12); --bar-on:#0b0b0b; --bar-on-ink:#ffffff;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --plane:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+  --gridline:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+  --solar:#c98500; --home:#3987e5; --batt:#199e70; --gridc:#9085e9;
+  --bar:#1a1a19; --bar-ink:#f0efec; --bar-line:rgba(255,255,255,.14); --bar-on:#f0efec; --bar-on-ink:#0b0b0b;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--plane);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;min-height:100vh}
+
+/* ---------- review bar (not part of the kiosk screen) ---------- */
+.rb{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;padding:10px 16px;background:var(--bar);
+  color:var(--bar-ink);border-bottom:1px solid var(--bar-line);font-size:14px}
+.rb-title strong{display:block;font-size:15px}
+.rb-title span{color:var(--muted);font-size:12px}
+.rb-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rb-group>span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--bar-line);border-radius:8px;overflow:hidden}
+.seg button,.rb .plain{font:inherit;color:inherit;background:transparent;border:0;padding:7px 11px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--bar-line)}
+.seg button[aria-pressed="true"]{background:var(--bar-on);color:var(--bar-on-ink)}
+.rb .plain{border:1px solid var(--bar-line);border-radius:8px}
+.rb button:focus-visible{outline:2px solid var(--home);outline-offset:2px}
+.rb label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.wrap{padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.viewport{position:relative;overflow:hidden;border-radius:6px;box-shadow:0 0 0 1px var(--bar-line),0 10px 30px rgba(0,0,0,.18)}
+.notes{max-width:900px;margin:0;color:var(--muted);font-size:13px;line-height:1.5;text-align:center}
+.exit{position:fixed;top:14px;right:14px;z-index:9;font:inherit;font-size:14px;padding:8px 12px;border-radius:8px;border:0;
+  background:rgba(0,0,0,.72);color:#fff;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .2s}
+body.kiosk{background:#000;overflow:hidden}
+body.kiosk .rb,body.kiosk .notes{display:none}
+body.kiosk .wrap{padding:0;height:100vh;justify-content:center}
+body.kiosk .viewport{border-radius:0;box-shadow:none}
+body.kiosk.showexit .exit{opacity:1;pointer-events:auto}
+
+/* ---------- the 1920 x 1080 kiosk screen ---------- */
+.stage{width:1920px;height:1080px;transform-origin:0 0;background:var(--plane);color:var(--ink);padding:30px 36px 32px;
+  display:flex;flex-direction:column;gap:20px;position:absolute;left:0;top:0;overflow:hidden;font-size:24px;line-height:1.25}
+.hdr{flex:none;height:70px;display:flex;align-items:center;justify-content:space-between}
+.hl{display:flex;align-items:center;gap:28px}
+.ttl{font-size:38px;font-weight:650;letter-spacing:-.01em}
+.chips{display:flex;gap:12px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:7px 14px 7px 10px;border-radius:999px;background:var(--surface);
+  border:1px solid var(--border);font-size:21px;color:var(--ink2)}
+.chip b{color:var(--ink);font-weight:600}
+.hr{display:flex;align-items:baseline;gap:26px;color:var(--ink2);font-size:26px}
+.clk{font-size:48px;font-weight:650;color:var(--ink);letter-spacing:-.01em}
+.ic{flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ic.good{color:var(--good)} .ic.warning{color:var(--warning)} .ic.critical{color:var(--critical)} .ic.info{color:var(--muted)}
+
+.banner{flex:none;height:76px;border-radius:18px;display:flex;align-items:center;gap:18px;padding:0 26px;font-size:25px}
+.banner b{font-size:28px;font-weight:650;white-space:nowrap}
+.banner .bt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.banner .sent{font-size:20px;opacity:.9;white-space:nowrap}
+.banner.critical{background:var(--critical);color:#fff}
+.banner.warning{background:var(--warning);color:#0b0b0b}
+.banner.info{background:var(--surface);border:1px solid var(--border);color:var(--ink)}
+.banner .ic{color:inherit}
+.banner.info .ic{color:var(--muted)}
+
+.main{flex:1;min-height:0;display:grid;gap:20px}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0;min-height:0}
+.rowg{display:grid;gap:20px;min-width:0;min-height:0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:20px 26px 22px;min-width:0;min-height:0;
+  display:flex;flex-direction:column}
+.card h3{margin:0;font-size:24px;font-weight:600;color:var(--ink2)}
+.ch{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:8px;flex:none}
+.legend{display:flex;gap:26px;font-size:22px;color:var(--ink2)}
+.key{display:inline-flex;align-items:center;gap:9px;white-space:nowrap}
+.key i{width:26px;height:4px;border-radius:2px;display:inline-block}
+.key i.sq{width:14px;height:14px;border-radius:3px}
+.key i.dash{height:0;border-radius:0;background:none;border-top:3px dashed var(--muted)}
+.key b{color:var(--ink);font-weight:600}
+.chart,.flowbox{flex:1;min-height:0;position:relative}
+.chart svg{position:absolute;left:0;top:0}
+.flowbox svg{position:absolute;inset:0;width:100%;height:100%}
+
+/* figures */
+.figs{display:flex;gap:14px;margin-top:10px}
+.fig{flex:1;min-width:0}
+.fig b{display:block;font-size:58px;font-weight:650;line-height:1.05;letter-spacing:-.02em;white-space:nowrap}
+.fig b small{font-size:30px;font-weight:600;color:var(--ink2);margin-left:5px}
+.fig span{font-size:21px;color:var(--ink2)}
+.foot{margin-top:auto;padding-top:10px;font-size:19px;color:var(--muted)}
+.backup.h{flex-direction:row;align-items:center;gap:34px}
+.backup.h .bh{flex:none;width:260px}
+.backup.h .bh .foot{padding-top:6px}
+.backup.h .figs{flex:1;margin:0}
+.rows{display:flex;flex-direction:column;justify-content:space-evenly;flex:1;min-height:0;margin-top:4px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:14px;font-size:24px;color:var(--ink2)}
+.row .rl{display:inline-flex;align-items:center;gap:11px;white-space:nowrap}
+.row .rl i{width:12px;height:12px;border-radius:50%;display:inline-block}
+.row b{font-size:29px;font-weight:650;color:var(--ink);white-space:nowrap}
+.row b small{font-size:21px;font-weight:500;color:var(--ink2);margin-left:5px}
+.meter{height:12px;border-radius:6px;overflow:hidden;background:color-mix(in srgb,var(--mc,var(--home)) 22%,var(--surface))}
+.meter i{display:block;height:100%;border-radius:6px;background:var(--mc,var(--home))}
+.hero{justify-content:center}
+.hero .hv{font-size:104px;font-weight:650;line-height:1;letter-spacing:-.03em;margin-top:6px;white-space:nowrap}
+.hero .hv small{font-size:44px;font-weight:600;color:var(--ink2);margin-left:8px;letter-spacing:0}
+.hero .hs{font-size:22px;color:var(--ink2);margin-top:8px}
+.row b.pos,.hero .hv.pos{color:var(--good)}
+
+/* rotating totals card: today / week / month / year */
+.tot{cursor:pointer}
+.tot .ch{margin-bottom:0}
+.selfw .meter{margin-top:10px}
+.tot h3 .rng{font-weight:500;color:var(--muted)}
+.tdots{display:flex;gap:8px;align-items:center;flex:none}
+.tdot{width:12px;height:12px;padding:0;border:0;border-radius:6px;cursor:pointer;position:relative;overflow:hidden;
+  background:color-mix(in srgb,var(--ink) 22%,var(--surface))}
+.tdot.on{width:38px}
+.tdot.on::after{content:"";position:absolute;inset:0;background:var(--ink2);transform-origin:0 50%;animation:prog var(--tpd,6s) linear forwards}
+.tot .ch,.tot .rows{animation:fade .45s ease-out}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* weather strip (Tempest) */
+.wx{flex:none;height:58px;flex-direction:row;align-items:center;gap:30px;padding:0 24px;border-radius:16px;
+  font-size:22px;color:var(--ink2);white-space:nowrap}
+.wx .wi{display:inline-flex;align-items:center;gap:9px}
+.wx .wi b{color:var(--ink);font-weight:600}
+.wx .wi .ic{color:var(--ink2)}
+.wx .wi .ic.warning{color:var(--warning)} .wx .wi .ic.good{color:var(--good)} .wx .wi .ic.info{color:var(--muted)}
+.wx .chk{margin-left:auto;padding-left:26px;border-left:1px solid var(--border);align-self:stretch}
+
+/* stat tiles */
+.tile .th{display:flex;align-items:center;gap:14px;font-size:27px;font-weight:600}
+.badge{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--ink);
+  background:color-mix(in srgb,var(--ec) 20%,var(--surface));box-shadow:inset 0 0 0 2px var(--ec)}
+.tile .tv{font-size:80px;font-weight:650;line-height:1;letter-spacing:-.03em;margin-top:12px;white-space:nowrap}
+.tile .tv small{font-size:34px;font-weight:600;color:var(--ink2);margin-left:8px;letter-spacing:0}
+.tile .ts{font-size:22px;color:var(--ink2);margin-top:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .ts.st{display:flex;align-items:center;gap:8px;color:var(--ink)}
+.tile.dim .tv,.tile.dim .meter{opacity:.45}
+.tile .meter{margin-top:auto;flex:none}
+
+/* panels */
+.panels{flex:1;min-height:0;display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:1fr;gap:14px;margin-top:6px}
+.pn{border:1px solid var(--border);border-radius:14px;padding:12px 16px;display:flex;flex-direction:column;justify-content:space-between;
+  --mc:var(--solar);min-height:0}
+.pn .pt{display:flex;justify-content:space-between;align-items:center;font-size:20px;color:var(--muted)}
+.pn .pt em{font-style:normal;display:inline-flex;align-items:center;gap:6px;color:var(--ink);font-weight:600}
+.pn b{font-size:38px;font-weight:650;letter-spacing:-.02em}
+.pn b small{font-size:22px;font-weight:500;color:var(--ink2);margin-left:5px}
+.pn.low{box-shadow:inset 0 0 0 3px var(--warning)}
+
+/* pager */
+.pager{display:flex;justify-content:center;gap:12px;align-items:center}
+.pg{font:inherit;font-size:22px;color:var(--ink2);background:var(--surface);border:1px solid var(--border);border-radius:999px;
+  padding:9px 26px;cursor:pointer;position:relative;overflow:hidden}
+.pg[aria-current="true"]{color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 2px var(--ink)}
+.pg[aria-current="true"].run::after{content:"";position:absolute;left:0;bottom:0;height:4px;width:100%;background:var(--ink);
+  transform-origin:0 50%;animation:prog var(--rot,8s) linear forwards}
+@keyframes prog{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+
+/* svg text + marks */
+svg text{font-family:inherit}
+.tick{font-size:20px;fill:var(--muted);font-variant-numeric:tabular-nums}
+.gl{stroke:var(--gridline);stroke-width:1}
+.bl{stroke:var(--axis);stroke-width:1}
+.nowl{stroke:var(--axis);stroke-width:1}
+.ln{fill:none;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.ar{opacity:.10}
+.dot{stroke:var(--surface);stroke-width:2}
+.cross{stroke:var(--muted);stroke-width:1;visibility:hidden}
+.ref{stroke:var(--muted);stroke-width:1}
+.reft{font-size:19px;fill:var(--muted)}
+.vlab{font-size:21px;fill:var(--ink);font-weight:600}
+.dlab{font-size:21px;fill:var(--muted)}
+.dlab.on{fill:var(--ink);font-weight:600}
+.fn{font-size:70px;font-weight:650;fill:var(--ink);letter-spacing:-.02em}
+.fu{font-size:26px;fill:var(--ink2)}
+.fl{font-size:34px;font-weight:650;fill:var(--ink)}
+.fc{font-size:26px;fill:var(--ink2)}
+.fc.strong{fill:var(--ink);font-weight:600}
+.trk{stroke:var(--gridline);stroke-width:8;stroke-linecap:round}
+.trk.broken{stroke-dasharray:2 18}
+.dots{fill:none;stroke-width:12;stroke-linecap:round;stroke-dasharray:.1 36;animation:flow var(--dur,1.4s) linear infinite}
+@keyframes flow{from{stroke-dashoffset:36.1}to{stroke-dashoffset:0}}
+.hub{fill:var(--surface);stroke:var(--axis);stroke-width:4}
+.nic{fill:none;stroke:var(--ink2);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+@media (prefers-reduced-motion:reduce){.dots{animation:none}.pg[aria-current="true"].run::after{animation:none}
+  .tdot.on::after,.tot .ch,.tot .rows{animation:none}}
+
+.tip{position:absolute;z-index:5;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--border);
+  border-radius:12px;padding:12px 16px;font-size:21px;box-shadow:0 8px 24px rgba(0,0,0,.22);white-space:nowrap;display:none}
+.tip .tt{color:var(--ink2);margin-bottom:6px}
+.tip .tr{display:flex;align-items:center;gap:10px}
+.tip .tr i{width:12px;height:12px;border-radius:50%}
+.tip .tr b{margin-left:auto;padding-left:22px;font-weight:650;font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+
+<header class="rb" id="rb">
+  <div class="rb-title"><strong>Solar kiosk mockups</strong><span>Invented sample data · 1920 × 1080 screen</span></div>
+  <div class="rb-group"><span>Layout</span><div class="seg" data-k="l">
+    <button data-v="flow">Flow hero</button><button data-v="tiles">Tiles + chart</button>
+    <button data-v="split">Split</button><button data-v="pages">Rotating pages</button></div></div>
+  <div class="rb-group"><span>Scenario</span><div class="seg" data-k="s">
+    <button data-v="sunny">Sunny midday</button><button data-v="evening">Evening on battery</button>
+    <button data-v="outage">Grid outage</button><button data-v="offline">Source offline</button>
+    <button data-v="cloudy">Cloudy day</button><button data-v="check">Solar below sunlight</button></div></div>
+  <div class="rb-group"><span>Theme</span><div class="seg" data-k="t">
+    <button data-v="light">Light</button><button data-v="dark">Dark</button></div></div>
+  <label id="rotwrap"><input type="checkbox" id="rot" checked> Auto-rotate pages</label>
+  <button class="plain" id="kiosk">Kiosk preview</button>
+</header>
+
+<main class="wrap">
+  <div class="viewport" id="vp"><div class="stage" id="stage"></div></div>
+  <p class="notes">Everything shown is invented sample data. Hover the charts and panels for exact values.
+    “Excess” is solar made minus what the home used today. The weather strip and the dashed “expected for the
+    sunlight” line come from the Tempest weather station: when solar falls well below that line on a sunny day,
+    something is wrong with the array; on a cloudy day both drop together and nothing alerts.
+    The “Today so far” card cycles through this week, this month and this year every 6 seconds: click it (or
+    its dots) to step through, hover to pause.
+    “Kiosk preview” hides this bar and shows exactly what the TV would display; press Esc to come back.
+    The page address remembers your choices, so reopening it returns to the same view.</p>
+</main>
+<button class="exit" id="exit">Exit preview (Esc)</button>
+
+<script>
+'use strict';
+/* ================= invented data ================= */
+const CAP = 27.2, RESERVE = 20, FLOOR = 5, SR = 5.75, SS = 20.25, DT = 0.25, DATE = 'Thu, Jun 12';
+const SCEN = {
+  sunny:   {now: 11.75, sky: 1,   vari: .04, startSoc: 38, seed: 7,  tomorrow: ['Sunny', 41],
+            wx: {cond: 'Sunny', icon: 'solar', temp: 74, wind: '6 mph SW, gusts 11', rain: 'Last rain 4 days ago', strike: null, uv: 9}},
+  evening: {now: 20.25, sky: 1,   vari: .04, startSoc: 38, seed: 7,  tomorrow: ['Mostly sunny', 38],
+            wx: {cond: 'Clear', icon: 'moon', temp: 68, wind: '3 mph S, gusts 6', rain: 'Last rain 4 days ago', strike: null, uv: 0}},
+  outage:  {now: 15.25, sky: .5,  vari: .06, startSoc: 24, seed: 11, tomorrow: ['Partly cloudy', 27], outageFrom: 14.75,
+            wx: {cond: 'Storms', icon: 'cloud', temp: 77, wind: '24 mph W, gusts 41', rain: '0.31 in today', strike: ['8 mi', 15.04], uv: 3}},
+  offline: {now: 10.0,  sky: .95, vari: .05, startSoc: 46, seed: 5,  tomorrow: ['Sunny', 40], offlineFrom: 9.5,
+            wx: {cond: 'Sunny', icon: 'solar', temp: 66, wind: '4 mph E, gusts 8', rain: 'Last rain 6 days ago', strike: null, uv: 6}},
+  cloudy:  {now: 13.25, sky: .2,  vari: .10, startSoc: 58, seed: 3,  tomorrow: ['Clearing by noon', 29],
+            wx: {cond: 'Overcast', icon: 'cloud', temp: 61, wind: '9 mph NE, gusts 15', rain: '0.12 in today', strike: null, uv: 2}},
+  /* sunny, but the whole array is dirty: every panel is low by the same amount, so only the sunlight check can see it */
+  check:   {now: 12.5,  sky: 1,   vari: .04, startSoc: 30, seed: 9,  tomorrow: ['Sunny', 31], soil: .755,
+            wx: {cond: 'Sunny', icon: 'solar', temp: 81, wind: '5 mph NW, gusts 9', rain: 'No rain in 23 days', strike: null, uv: 10}},
+};
+const WEEK = [['Fri', 41.2, 22.4], ['Sat', 38.6, 25.1], ['Sun', 12.4, 27.9], ['Mon', 29.8, 21.6], ['Tue', 43.1, 23.8], ['Wed', 40.5, 26.2]];
+/* invented daily totals, Jan 1 (day 0) to yesterday Jun 11 (day 161); the last six days are WEEK */
+const DAYS = (() => {
+  const r = rng(2025), out = [];
+  for (let d = 0; d < 162; d++) {
+    const clearDay = 30 + 13 * Math.cos(2 * Math.PI * (d - 171) / 365), sky = r() < .25 ? .25 + .35 * r() : .82 + .18 * r();
+    let solar = clearDay * sky, home = 23 + 3 * Math.cos(2 * Math.PI * d / 365) + (r() - .5) * 5;
+    const w = WEEK[d - 156]; if (w) { solar = w[1]; home = w[2]; }
+    const net = solar * .96 - home, base = .25 + .3 * r();   /* sold − bought = net; ~4% battery losses */
+    out.push({solar, home, imp: Math.max(0, -net) + base, exp: Math.max(0, net) + base});
+  }
+  return out;
+})();
+const PERIODS = [
+  {name: 'today', title: 'Today so far', from: 162},
+  {name: 'this week', title: 'This week', range: 'Jun 9–12', from: 159},
+  {name: 'this month', title: 'This month', range: 'Jun 1–12', from: 151},
+  {name: 'this year', title: 'This year', range: 'Jan 1 – Jun 12', from: 0},
+];
+
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const bump=(t,c,w)=>Math.exp(-((t-c)**2)/(2*w*w));
+
+function simulate(sc){
+  const rnd=rng(sc.seed), pts=[]; let soc=sc.startSoc, drift=0;
+  for(let i=0;i*DT<=sc.now+1e-9;i++){
+    const t=i*DT; drift=drift*.7+(rnd()-.5)*.6;
+    const clear=t>SR&&t<SS?Math.pow(Math.sin(Math.PI*(t-SR)/(SS-SR)),1.25)*6.9:0;
+    const pot=Math.max(0,clear*(sc.sky+drift*sc.vari*2));   /* what the sunlight allows */
+    let solar=pot*(sc.soil||1), cur=false;
+    const home=Math.max(.3,.55+.7*bump(t,7.5,.8)+.45*bump(t,12.5,.7)+1.5*bump(t,18.8,1.3)+(rnd()-.5)*.3);
+    const outage=sc.outageFrom!=null&&t>=sc.outageFrom, floor=outage?FLOOR:RESERVE, net=solar-home;
+    let batt=0, grid=0;
+    if(net>=0){
+      const chg=Math.min(net,5,(100-soc)/100*CAP/DT); batt=-chg; grid=-(net-chg);
+      if(outage){solar-=(net-chg); grid=0; cur=net-chg>.05}
+    }else{
+      const dis=Math.min(-net,10,Math.max(0,(soc-floor)/100*CAP/DT)); batt=dis; grid=outage?0:(-net-dis);
+    }
+    soc=Math.min(100,Math.max(0,soc-batt*DT/CAP*100));
+    /* ex: expected kW for the Tempest's sunlight (a healthy array runs ~98% of it); sun: Tempest W/m² */
+    pts.push({t,solar,home,grid,batt,soc,ex:pot/.98,sun:pot/6.9*990,cur});
+  }
+  return pts;
+}
+
+/* ================= formatting ================= */
+const kw=v=>{const a=Math.abs(v);return (a<.05?0:a).toFixed(1)};
+const k1=v=>v.toFixed(1);
+const sgn=(v,d=1)=>{const a=Math.abs(v);return a<.5*10**-d?(0).toFixed(d):(v>0?'+':'−')+a.toFixed(d)};
+/* kWh that may run into the thousands: one decimal under 100, whole numbers with commas above */
+const kv=v=>{const a=Math.abs(v);return a>=100?Math.round(a).toLocaleString('en-US'):a.toFixed(1)};
+const sgnk=v=>Math.abs(v)<.05?'0.0':(v>0?'+':'−')+kv(v);
+function clock(h){h=((h%24)+24)%24;let H=Math.floor(h+1e-6),M=Math.round((h-H)*60);if(M===60){H=(H+1)%24;M=0}
+  return `${H%12===0?12:H%12}:${String(M).padStart(2,'0')} ${H<12?'AM':'PM'}`}
+const hrs=h=>!isFinite(h)||h>48?'48+':h>=10?String(Math.round(h)):h.toFixed(1);
+
+function model(key){
+  const sc=SCEN[key], pts=simulate(sc), last=pts[pts.length-1];
+  const sum=f=>pts.reduce((a,p)=>a+f(p)*DT,0);
+  const solarKwh=sum(p=>p.solar), homeKwh=sum(p=>p.home), impKwh=sum(p=>Math.max(p.grid,0)), expKwh=sum(p=>Math.max(-p.grid,0));
+  const peak=pts.reduce((a,p)=>p.solar>a.solar?p:a,pts[0]);
+  const avgLoad=homeKwh/Math.max(sc.now,DT), peakLoad=Math.max(...pts.map(p=>p.home));
+  const stale=sc.offlineFrom!=null, outage=sc.outageFrom!=null;
+  const bp=stale?pts.find(p=>p.t>=sc.offlineFrom):last;
+  const soc=bp.soc, batt=stale?0:last.batt, usable=Math.max(0,soc-FLOOR)/100*CAP;
+  const eta=h=>{const t=Math.round((sc.now+h)*12)/12;return clock(t)+(t>=24?' tomorrow':'')};
+  let bState,bEta;
+  if(stale){bState='No data';bEta='since '+clock(sc.offlineFrom)}
+  else if(batt<-.05){bState=`Charging ${kw(batt)} kW`;bEta=soc>=99.5?'Full':'Full by '+eta((100-soc)/100*CAP/-batt)}
+  else if(batt>.05){const h=(soc-(outage?FLOOR:RESERVE))/100*CAP/batt;bState=`Powering home ${kw(batt)} kW`;
+    bEta=h>24?'More than a day left':(outage?'Lasts until ':'Reserve by ')+eta(h)}
+  else{bState=soc>=99.5?'Full':'Idle';bEta=soc<=RESERVE+.5?'Holding reserve':'Standing by'}
+  let gState,gSub;
+  if(outage){gState='Outage';gSub='since '+clock(sc.outageFrom)}
+  else if(last.grid<-.05){gState='Exporting';gSub=`${k1(expKwh)} kWh out today`}
+  else if(last.grid>.05){gState='Importing';gSub=`${k1(impKwh)} kWh in today`}
+  else{gState='Idle';gSub=`${k1(impKwh)} in · ${k1(expKwh)} out`}
+  const selfPct=Math.round(100*(1-impKwh/homeKwh));
+  const excess=solarKwh-homeKwh;
+  /* solar check: today's solar against what the Tempest's sunlight says it should be */
+  const exKwh=sum(p=>p.ex), checkPct=Math.round(100*solarKwh/exKwh);
+  const check=last.cur?{state:'info',icon:'info',pct:null}
+             :{state:checkPct<85?'warning':'good',icon:checkPct<85?'warn':'good',pct:checkPct};
+  let alert=null;
+  if(outage) alert={level:'critical',icon:'crit',title:'Grid outage',
+    text:`Utility power went out at ${clock(sc.outageFrom)}. The home is running on solar and battery.`,sent:'Sent: ntfy · Home Assistant · Email'};
+  else if(stale) alert={level:'warning',icon:'warn',title:'Battery data unavailable',
+    text:`FranklinWH has not answered since ${clock(sc.offlineFrom)}. Battery and backup figures are from the last reading.`,sent:'Sent: ntfy'};
+  else if(check.state==='warning') alert={level:'warning',icon:'warn',title:'Solar below the sunlight',
+    text:`Making ${check.pct}% of what this sunlight should give, on every panel. Likely dirt: ${sc.wx.rain.toLowerCase()}.`,sent:'Sent: ntfy'};
+  else if(sc.sky<.4){const clearKwh=simulate({...sc,sky:1}).reduce((a,p)=>a+p.solar*DT,0);
+    alert={level:'info',icon:'info',title:'Cloudy day',
+    text:`Solar is ${Math.round(100*(1-solarKwh/clearKwh))}% below a clear day, but the array is making ${check.pct}% of what this sunlight allows.`,sent:'No alert sent'}}
+  const week=WEEK.map(d=>({d:d[0],solar:d[1],home:d[2]})).concat([{d:'Today',solar:solarKwh,home:homeKwh,today:true}]);
+  const pr=rng(41), wts=Array.from({length:24},(_,i)=>i===7?.38:.96+pr()*.08), wsum=wts.reduce((a,b)=>a+b,0);
+  const panels=wts.map(w=>Math.round(last.solar*1000*w/wsum));
+  const totals=PERIODS.map(P=>{const t={...P,solar:solarKwh,home:homeKwh,imp:impKwh,exp:expKwh};
+    for(const d of DAYS.slice(P.from)){t.solar+=d.solar;t.home+=d.home;t.imp+=d.imp;t.exp+=d.exp}
+    t.self=Math.round(100*(1-t.imp/t.home)); return t});
+  return {key,sc,pts,last,solar:last.solar,home:last.home,grid:last.grid,batt,soc,stale,outage,solarKwh,homeKwh,impKwh,expKwh,peak,totals,
+    avgLoad,peakLoad,usable,bState,bEta,gState,gSub,selfPct,excess,check,alert,week,panels,
+    backup:{now:usable/last.home,avg:usable/avgLoad,peak:usable/peakLoad}};
+}
+
+/* ================= icons ================= */
+const IC={
+  solar:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/>',
+  home:'<path d="M3.5 11.2 12 4l8.5 7.2M5.8 9.6V20h12.4V9.6M10 20v-5.4h4V20"/>',
+  grid:'<path d="M8.5 21 10.6 3h2.8l2.1 18M6 8h12M7.5 12.5h9M9.6 8l5.6 4.5M14.4 8l-5.6 4.5M8.9 12.5 15 21M15.1 12.5 9 21"/>',
+  batt:'<rect x="6.5" y="5.5" width="11" height="15.5" rx="2"/><path d="M10 3h4v2.5h-4zM12.6 9.5l-2.4 4h3.6l-2.4 4"/>',
+  good:'<circle cx="12" cy="12" r="9"/><path d="m8 12.3 2.7 2.7L16 9.5"/>',
+  warn:'<path d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4.6M12 17.3v.2"/>',
+  crit:'<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/>',
+  temp:'<path d="M10 14.2V5.2a2 2 0 0 1 4 0v9a4 4 0 1 1-4 0z"/><path d="M12 9.5v7"/>',
+  wind:'<path d="M3 8.5h10.5a2.6 2.6 0 1 0-2.6-2.6M3 12.5h15a2.6 2.6 0 1 1-2.6 2.6M3 16.5h7"/>',
+  drop:'<path d="M12 3.5s-6 6.4-6 10.6a6 6 0 0 0 12 0c0-4.2-6-10.6-6-10.6z"/>',
+  bolt:'<path d="M13.2 2.8 5.8 13.4h6l-1 7.8 7.4-10.6h-6z"/>',
+  cloud:'<path d="M7.2 18.5h9.9a4 4 0 0 0 .5-7.97 5.6 5.6 0 0 0-10.7 1.1A3.5 3.5 0 0 0 7.2 18.5z"/>',
+  moon:'<path d="M19.5 14.6A8 8 0 1 1 9.4 4.5a6.4 6.4 0 0 0 10.1 10.1z"/>',
+};
+const ico=(n,size=28,cls='')=>`<svg class="ic ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
+const COL={solar:'var(--solar)',home:'var(--home)',grid:'var(--gridc)',batt:'var(--batt)'};
+
+/* per-entity display text, shared by the flow diagram and the tiles */
+function ents(m){
+  return {
+    solar:{label:'Solar',num:kw(m.solar),unit:'kW',c1:`${k1(m.solarKwh)} kWh today`,c2:`Peak ${kw(m.peak.solar)} kW at ${clock(m.peak.t)}`},
+    home:{label:'Home',num:kw(m.home),unit:'kW',c1:`${k1(m.homeKwh)} kWh today`,c2:m.stale?'Estimated from Enphase':`${m.selfPct}% self-powered`},
+    grid:m.outage?{label:'Grid',num:'—',unit:'down',c1:m.gState,c2:m.gSub,state:'crit'}
+                 :{label:'Grid',num:kw(m.grid),unit:'kW',c1:m.gState,c2:m.gSub},
+    batt:{label:'Battery',num:String(Math.round(m.soc)),unit:'%',c1:m.bState,c2:m.bEta,state:m.stale?'warn':null},
+  };
+}
+
+/* ================= flow diagram ================= */
+function flowSVG(m){
+  const E=ents(m), R=110, HY=410, N={solar:[600,125,'r'],home:[600,695,'l'],grid:[210,HY,'b'],batt:[990,HY,'b']};
+  const spokes=[
+    {k:'solar',a:[600,125+R+6],b:[600,HY-30],p:m.solar},
+    {k:'home',a:[600,695-R-6],b:[600,HY+30],p:-m.home},
+    {k:'grid',a:[210+R+6,HY],b:[570,HY],p:m.outage?0:m.grid},
+    {k:'batt',a:[990-R-6,HY],b:[630,HY],p:m.stale?0:m.batt},
+  ];
+  let s=`<svg viewBox="0 0 1200 820" role="img" aria-label="Power flow: solar ${kw(m.solar)} kilowatts, home ${kw(m.home)} kilowatts, grid ${m.outage?'down':m.gState+' '+kw(m.grid)+' kilowatts'}, battery ${Math.round(m.soc)} percent">`;
+  for(const sp of spokes){
+    const broken=sp.k==='grid'&&m.outage;
+    s+=`<line class="trk${broken?' broken':''}" x1="${sp.a[0]}" y1="${sp.a[1]}" x2="${sp.b[0]}" y2="${sp.b[1]}"/>`;
+    if(broken){const mx=(sp.a[0]+sp.b[0])/2;s+=`<g stroke="var(--critical)" stroke-width="6" stroke-linecap="round"><path d="M${mx-13} ${HY-13}l26 26M${mx+13} ${HY-13}l-26 26"/></g>`}
+    if(Math.abs(sp.p)>.05){
+      const from=sp.p>0?sp.a:sp.b, to=sp.p>0?sp.b:sp.a, dx=to[0]-from[0], dy=to[1]-from[1], len=Math.hypot(dx,dy);
+      const ex=to[0]-dx/len*26, ey=to[1]-dy/len*26, ang=Math.atan2(dy,dx)*180/Math.PI;
+      const dur=(2.3-1.7*Math.min(1,Math.abs(sp.p)/7)).toFixed(2);
+      s+=`<path class="dots" style="--dur:${dur}s" stroke="${COL[sp.k]}" d="M${from[0]} ${from[1]}L${ex} ${ey}"/>`;
+      s+=`<polygon points="0,0 -22,-13 -22,13" fill="${COL[sp.k]}" transform="translate(${to[0]} ${to[1]}) rotate(${ang})"/>`;
+    }
+  }
+  s+=`<circle class="hub" cx="600" cy="${HY}" r="24"/><circle cx="600" cy="${HY}" r="7" fill="var(--axis)"/>`;
+  for(const k of ['solar','home','grid','batt']){
+    const [cx,cy,pos]=N[k], e=E[k], c=COL[k], dim=k==='batt'&&m.stale;
+    s+=`<g${dim?' opacity=".45"':''}>`;
+    s+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="color-mix(in srgb, ${c} 9%, var(--surface))"/>`;
+    if(k==='batt'){
+      s+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="color-mix(in srgb, ${c} 24%, var(--surface))" stroke-width="12"/>`;
+      s+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${c}" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="${Math.max(.5,m.soc).toFixed(1)} 100" transform="rotate(-90 ${cx} ${cy})"/>`;
+    }else if(e.state==='crit'){
+      s+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="var(--critical)" stroke-width="6" stroke-dasharray="14 12"/>`;
+    }else s+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${c}" stroke-width="6"/>`;
+    s+=`<g class="nic" transform="translate(${cx-22} ${cy-88}) scale(1.83)">${IC[k]}</g>`;
+    s+=`<text class="fn" x="${cx}" y="${cy+24}" text-anchor="middle">${e.num}</text><text class="fu" x="${cx}" y="${cy+62}" text-anchor="middle">${e.unit}</text></g>`;
+    const mark=e.state?`<g transform="translate(${cx-76} ${cy+R+67}) scale(1.25)" class="ic ${e.state==='crit'?'critical':'warning'}" stroke-width="2">${IC[e.state]}</g>`:'';
+    if(pos==='r'||pos==='l'){const x=pos==='r'?cx+R+34:cx-R-34, a=pos==='r'?'start':'end';
+      s+=`<text class="fl" x="${x}" y="${cy-26}" text-anchor="${a}">${e.label}</text><text class="fc" x="${x}" y="${cy+12}" text-anchor="${a}">${e.c1}</text><text class="fc" x="${x}" y="${cy+46}" text-anchor="${a}">${e.c2}</text>`;
+    }else{
+      const tx=e.state?cx+18:cx;
+      s+=`<text class="fl" x="${cx}" y="${cy+R+50}" text-anchor="middle">${e.label}</text>${mark}`+
+         `<text class="fc${e.state?' strong':''}" x="${tx}" y="${cy+R+90}" text-anchor="middle">${e.c1}</text><text class="fc" x="${cx}" y="${cy+R+124}" text-anchor="middle">${e.c2}</text>`;
+    }
+  }
+  return s+'</svg>';
+}
+
+/* ================= charts ================= */
+let scale=1;
+const stage=document.getElementById('stage');
+let tip;
+function showTip(e,html){
+  const r=stage.getBoundingClientRect(), x=(e.clientX-r.left)/scale, y=(e.clientY-r.top)/scale;
+  tip.innerHTML=html; tip.style.display='block';
+  const w=tip.offsetWidth, h=tip.offsetHeight;
+  tip.style.left=Math.max(8,x+22+w>1900?x-w-22:x+22)+'px'; tip.style.top=Math.max(8,Math.min(1080-h-8,y+18))+'px';
+}
+const hideTip=()=>{if(tip)tip.style.display='none'};
+
+function lineChart(el,cfg){
+  const W=el.clientWidth,H=el.clientHeight,mL=78,mR=26,mT=14,mB=40,pw=W-mL-mR,ph=H-mT-mB;
+  const x=t=>mL+pw*t/24, y=v=>mT+ph*(1-v/cfg.yMax);
+  const ticks=ph<150?cfg.yTicks.filter((_,i)=>i%2===0):cfg.yTicks;
+  let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${cfg.aria}">`;
+  for(const v of ticks){ if(v>0) s+=`<line class="gl" x1="${mL}" x2="${W-mR}" y1="${y(v)}" y2="${y(v)}"/>`;
+    s+=`<text class="tick" x="${mL-12}" y="${y(v)+7}" text-anchor="end">${cfg.yFmt(v)}</text>`}
+  s+=`<line class="bl" x1="${mL}" x2="${W-mR}" y1="${y(0)}" y2="${y(0)}"/>`;
+  (pw<640?[[6,'6 AM','middle'],[12,'12 PM','middle'],[18,'6 PM','middle']]
+         :[[0,'12 AM','start'],[6,'6 AM','middle'],[12,'12 PM','middle'],[18,'6 PM','middle'],[24,'12 AM','end']]).forEach(([t,l,a])=>
+    s+=`<text class="tick" x="${x(t)}" y="${H-10}" text-anchor="${a}">${l}</text>`);
+  if(cfg.ref) s+=`<line class="ref" x1="${mL}" x2="${W-mR}" y1="${y(cfg.ref.v)}" y2="${y(cfg.ref.v)}"/><text class="reft" x="${W-mR-6}" y="${y(cfg.ref.v)+24}" text-anchor="end">${cfg.ref.label}</text>`;
+  s+=`<line class="nowl" x1="${x(cfg.now)}" x2="${x(cfg.now)}" y1="${mT}" y2="${y(0)}"/>`;
+  for(const se of cfg.series){
+    const d=se.data.map((v,i)=>`${i?'L':'M'}${x(i*DT).toFixed(1)} ${y(v).toFixed(1)}`).join('');
+    const lx=x((se.data.length-1)*DT), lv=se.data[se.data.length-1];
+    if(se.dash){s+=`<path class="ln" stroke="${se.color}" stroke-width="2.5" stroke-dasharray="10 8" d="${d}"/>`;continue}
+    s+=`<path class="ar" fill="${se.color}" d="${d}L${lx.toFixed(1)} ${y(0)}L${x(0)} ${y(0)}Z"/><path class="ln" stroke="${se.color}" d="${d}"/>`;
+    s+=`<circle class="dot" cx="${lx}" cy="${y(lv)}" r="7" fill="${se.color}"/>`;
+  }
+  s+=`<line class="cross" y1="${mT}" y2="${y(0)}"/>`;
+  cfg.series.forEach((se,i)=>s+=`<circle class="dot hd" data-i="${i}" r="7" fill="${se.color}" visibility="hidden"/>`);
+  s+=`<rect class="ov" x="${mL}" y="${mT}" width="${pw}" height="${ph}" fill="transparent"/></svg>`;
+  el.innerHTML=s;
+  const svg=el.firstChild, cross=svg.querySelector('.cross'), hds=[...svg.querySelectorAll('.hd')], ov=svg.querySelector('.ov');
+  const maxI=Math.max(...cfg.series.map(se=>se.data.length-1));
+  ov.addEventListener('mousemove',e=>{
+    const r=svg.getBoundingClientRect(), px=(e.clientX-r.left)/scale;
+    const i=Math.max(0,Math.min(maxI,Math.round((px-mL)/pw*24/DT)));
+    cross.setAttribute('x1',x(i*DT));cross.setAttribute('x2',x(i*DT));cross.style.visibility='visible';
+    let rows='';
+    cfg.series.forEach((se,k)=>{const v=se.data[i];
+      if(v==null){hds[k].setAttribute('visibility','hidden');rows+=`<div class="tr"><i style="background:${se.color}"></i>${se.name}<b>no data</b></div>`;return}
+      hds[k].setAttribute('cx',x(i*DT));hds[k].setAttribute('cy',y(v));hds[k].setAttribute('visibility','visible');
+      rows+=`<div class="tr"><i style="background:${se.color}"></i>${se.name}<b>${cfg.vFmt(v)}</b></div>`});
+    showTip(e,`<div class="tt">${clock(i*DT)}</div>${rows}`);
+  });
+  ov.addEventListener('mouseleave',()=>{cross.style.visibility='hidden';hds.forEach(h=>h.setAttribute('visibility','hidden'));hideTip()});
+}
+
+const CHARTS={
+  power(el,m){lineChart(el,{aria:'Solar production and home use today, in kilowatts',now:m.sc.now,yMax:8,yTicks:[0,2,4,6,8],
+    yFmt:v=>v===8?'8 kW':String(v),vFmt:v=>v.toFixed(1)+' kW',
+    series:[{name:'Expected for the sunlight',color:'var(--muted)',dash:true,data:m.pts.map(p=>p.ex)},
+      {name:'Solar',color:COL.solar,data:m.pts.map(p=>p.solar)},{name:'Home',color:COL.home,data:m.pts.map(p=>p.home)}]})},
+  soc(el,m){const pts=m.stale?m.pts.filter(p=>p.t<=m.sc.offlineFrom):m.pts;
+    lineChart(el,{aria:'Battery charge today, in percent',now:m.sc.now,yMax:100,yTicks:[0,25,50,75,100],yFmt:v=>v+'%',vFmt:v=>Math.round(v)+'%',
+    ref:{v:RESERVE,label:`Reserve ${RESERVE}%`},series:[{name:'Battery',color:COL.batt,data:pts.map(p=>p.soc)}]})},
+  week(el,m){
+    const W=el.clientWidth,H=el.clientHeight,mL=104,mR=20,mT=34,mB=46,pw=W-mL-mR,ph=H-mT-mB,yMax=50,bw=24;
+    const y=v=>mT+ph*(1-v/yMax), band=pw/m.week.length;
+    const bar=(bx,v,c)=>{const y1=y(v),y0=y(0),r=Math.min(4,(y0-y1)/2);
+      return `<path fill="${c}" d="M${bx} ${y0}V${y1+r}Q${bx} ${y1} ${bx+r} ${y1}H${bx+bw-r}Q${bx+bw} ${y1} ${bx+bw} ${y1+r}V${y0}Z"/>`};
+    let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Solar produced and home use per day for the last seven days, in kilowatt-hours">`;
+    for(const v of [0,10,20,30,40,50]){ if(v>0) s+=`<line class="gl" x1="${mL}" x2="${W-mR}" y1="${y(v)}" y2="${y(v)}"/>`;
+      s+=`<text class="tick" x="${mL-12}" y="${y(v)+7}" text-anchor="end">${v===50?'50 kWh':v}</text>`}
+    m.week.forEach((d,i)=>{const cx=mL+band*(i+.5);
+      s+=bar(cx-bw-1,d.solar,COL.solar)+bar(cx+1,d.home,COL.home);
+      s+=`<text class="dlab${d.today?' on':''}" x="${cx}" y="${H-12}" text-anchor="middle">${d.d}</text>`;
+      if(d.today) s+=`<text class="vlab" x="${cx-bw/2-1}" y="${y(d.solar)-10}" text-anchor="end">${k1(d.solar)}</text><text class="vlab" x="${cx+bw/2+1}" y="${y(d.home)-10}" text-anchor="start">${k1(d.home)}</text>`;
+      const t=`<div class='tt'>${d.d}${d.today?' so far':''}</div><div class='tr'><i style='background:${COL.solar}'></i>Solar<b>${k1(d.solar)} kWh</b></div><div class='tr'><i style='background:${COL.home}'></i>Home<b>${k1(d.home)} kWh</b></div><div class='tr'><i></i>Excess<b>${sgn(d.solar-d.home)} kWh</b></div>`;
+      s+=`<rect x="${mL+band*i}" y="${mT}" width="${band}" height="${ph}" fill="transparent" data-tip="${t}"/>`});
+    s+=`<line class="bl" x1="${mL}" x2="${W-mR}" y1="${y(0)}" y2="${y(0)}"/></svg>`;
+    el.innerHTML=s;
+  },
+};
+
+/* ================= cards ================= */
+function header(m){
+  const fr=m.stale?`<span class="chip">${ico('crit',26,'critical')}<b>FranklinWH</b> Offline</span>`:`<span class="chip">${ico('good',26,'good')}<b>FranklinWH</b> Live</span>`;
+  return `<div class="hdr"><div class="hl"><div class="ttl">Home energy</div><div class="chips"><span class="chip">${ico('good',26,'good')}<b>Enphase</b> Live</span>${fr}<span class="chip">${ico('good',26,'good')}<b>Tempest</b> Live</span></div></div>
+    <div class="hr"><span>${DATE}</span><span class="clk">${clock(m.sc.now)}</span></div></div>`;
+}
+/* weather strip: Tempest readings on the left, the solar check on the right */
+function wxStrip(m){
+  const w=m.sc.wx, day=m.last.sun>20, it=(ic,html,cls='')=>`<span class="wi">${ico(ic,26,cls)}${html}</span>`;
+  const chk=m.check.pct==null?`Solar check <b>paused</b> while off-grid`
+    :`Solar <b>${m.check.pct}%</b> of what ${day?'this':'today’s'} sunlight allows`;
+  return `<section class="card wx" aria-label="Weather from the Tempest station">
+    ${it(w.icon,`<b>${w.temp}°F</b> ${w.cond}`)}${it('wind',w.wind)}${it('drop',w.rain)}
+    ${w.strike?it('bolt',`Lightning <b>${w.strike[0]}</b> away · ${clock(w.strike[1])}`,'warning'):it('bolt','No lightning')}
+    ${it('solar',day?`<b>${Math.round(m.last.sun)} W/m²</b> sun · UV ${w.uv}`:'Sun down')}
+    <span class="wi chk">${ico(m.check.icon,26,m.check.state)}${chk}</span></section>`;
+}
+const banner=m=>m.alert?`<div class="banner ${m.alert.level}" role="status">${ico(m.alert.icon,38)}<b>${m.alert.title}</b><span class="bt">${m.alert.text}</span><span class="sent">${m.alert.sent}</span></div>`:'';
+const flowCard=m=>`<section class="card"><div class="flowbox">${flowSVG(m)}</div></section>`;
+const legendPower=m=>`<div class="legend"><span class="key"><i style="background:${COL.solar}"></i>Solar <b>${kw(m.solar)} kW</b></span><span class="key"><i style="background:${COL.home}"></i>Home <b>${kw(m.home)} kW</b></span><span class="key"><i class="dash"></i>Expected for the sunlight</span></div>`;
+const powerCard=m=>`<section class="card"><div class="ch"><h3>Power today</h3>${legendPower(m)}</div><div class="chart" data-chart="power"></div></section>`;
+const socCard=m=>`<section class="card"><div class="ch"><h3>Battery charge today</h3><div class="legend"><span class="key"><b>${Math.round(m.soc)}%</b>${m.stale?' at last reading':' now'}</span></div></div><div class="chart" data-chart="soc"></div></section>`;
+function backupCard(m,horizontal){
+  const title=m.outage?'Backup remaining':'If the grid goes down';
+  const foot=m.stale?`From the last battery reading, ${clock(m.sc.offlineFrom)}.`:`Worst case: assumes no solar. Keeps ${FLOOR}% back.`;
+  const figs=`<div class="figs"><div class="fig"><b>${hrs(m.backup.now)}<small>h</small></b><span>at current use</span></div>
+    <div class="fig"><b>${hrs(m.backup.avg)}<small>h</small></b><span>at today’s average</span></div>
+    <div class="fig"><b>${hrs(m.backup.peak)}<small>h</small></b><span>at peak use</span></div></div>`;
+  return horizontal?`<section class="card backup h"><div class="bh"><h3>${title}</h3><div class="foot">${foot}</div></div>${figs}</section>`
+                   :`<section class="card backup"><h3>${title}</h3>${figs}<div class="foot">${foot}</div></section>`;
+}
+/* "Today so far" card: cycles today / this week / this month / this year (state.tp) */
+const TP_MS=6000;
+function totInner(m,meter){
+  const p=m.totals[state.tp], ex=p.solar-p.home, pos=ex>=.05;
+  const row=(c,l,v,u,cls='')=>`<div class="row"><span class="rl">${c?`<i style="background:${c}"></i>`:''}${l}</span><b${cls?` class="${cls}"`:''}>${v}<small>${u}</small></b></div>`;
+  const dots=m.totals.map((t,i)=>`<button class="tdot${i===state.tp?' on':''}" data-tp="${i}" aria-label="Show ${t.name}"${i===state.tp?' aria-current="true"':''}></button>`).join('');
+  return `<div class="ch"><h3>${p.title}${p.range?` <span class="rng">· ${p.range}</span>`:''}</h3><div class="tdots">${dots}</div></div><div class="rows">
+    ${row(COL.solar,'Solar produced',kv(p.solar),'kWh')}${row(COL.home,'Home used',kv(p.home),'kWh')}
+    ${row(pos?'var(--good)':'var(--muted)','Excess (solar − home)',sgnk(ex),'kWh',pos?'pos':'')}
+    ${row(COL.grid,'Bought from grid',kv(p.imp),'kWh')}${row(COL.grid,'Sold to grid',kv(p.exp),'kWh')}
+    <div class="selfw">${row('var(--muted)','Self-powered',p.self,'%')}${meter?`<div class="meter" role="img" aria-label="Self-powered ${p.self} percent"><i style="width:${p.self}%"></i></div>`:''}</div></div>`;
+}
+const todayCard=(m,meter=true)=>`<section class="card tot" data-tot="${meter?1:0}" style="flex:1;--tpd:${TP_MS}ms">${totInner(m,meter)}</section>`;
+const tomorrowCard=m=>`<section class="card hero"><h3>Tomorrow</h3><div class="hv" style="font-size:72px">~${m.sc.tomorrow[1]}<small style="font-size:34px">kWh</small></div>
+  <div class="hs">${m.sc.tomorrow[0]} · forecast solar</div></section>`;
+const excessCard=m=>`<section class="card hero"><h3>Excess today</h3><div class="hv${m.excess>=.05?' pos':''}" style="font-size:72px">${sgn(m.excess)}<small style="font-size:34px">kWh</small></div>
+  <div class="hs">Solar ${k1(m.solarKwh)} − home ${k1(m.homeKwh)} kWh</div></section>`;
+const heroCard=(t,v,u,sub,cls='')=>`<section class="card hero" style="flex:1"><h3>${t}</h3><div class="hv${cls?' '+cls:''}">${v}<small>${u}</small></div><div class="hs">${sub}</div></section>`;
+function tiles(m){
+  const E=ents(m);
+  return ['solar','home','grid','batt'].map(k=>{const e=E[k], st=e.state?ico(e.state,26,e.state==='crit'?'critical':'warning'):'';
+    return `<section class="card tile${k==='batt'&&m.stale?' dim':''}" style="--ec:${COL[k]}"><div class="th"><span class="badge">${ico(k,28)}</span>${e.label}</div>
+      <div class="tv">${e.num}<small>${e.unit}</small></div><div class="ts${e.state?' st':''}">${st}${e.c1}</div><div class="ts">${e.c2}</div>
+      ${k==='batt'?`<div class="meter" style="--mc:${COL.batt}"><i style="width:${m.soc.toFixed(0)}%"></i></div>`:''}</section>`}).join('');
+}
+function weekCards(m){
+  const ws=m.week.reduce((a,d)=>a+d.solar,0), wh=m.week.reduce((a,d)=>a+d.home,0), best=m.week.reduce((a,d)=>d.solar>a.solar?d:a);
+  const row=(l,v,u)=>`<div class="row"><span class="rl">${l}</span><b>${v}<small>${u}</small></b></div>`;
+  return `<section class="card"><div class="ch"><h3>Last 7 days</h3><div class="legend"><span class="key"><i class="sq" style="background:${COL.solar}"></i>Solar produced</span><span class="key"><i class="sq" style="background:${COL.home}"></i>Home used</span></div></div><div class="chart" data-chart="week"></div></section>
+    <section class="card"><h3>7-day totals</h3><div class="rows">${row('Solar produced',Math.round(ws),'kWh')}${row('Home used',Math.round(wh),'kWh')}
+    ${row('Best solar day',best.d,k1(best.solar)+' kWh')}${row('Excess (solar − home)',sgn(ws-wh,0),'kWh')}${row('Days fully self-powered','5','of 7')}</div></section>`;
+}
+function panelCards(m){
+  const med=[...m.panels].sort((a,b)=>a-b)[12], asleep=m.solar<.05;
+  const cells=m.panels.map((w,i)=>{const low=!asleep&&w<med*.6;
+    const t=`<div class='tt'>Panel ${i+1}</div><div class='tr'>Output<b>${w} W</b></div><div class='tr'>Versus typical panel<b>${med?Math.round(100*w/med):0}%</b></div>`;
+    return `<div class="pn${low?' low':''}" data-tip="${t}"><div class="pt"><span>Panel ${i+1}</span>${low?`<em>${ico('warn',22,'warning')}Low</em>`:''}</div>
+      <b>${w}<small>W</small></b><div class="meter"><i style="width:${Math.min(100,w/300*100).toFixed(0)}%"></i></div></div>`}).join('');
+  const row=(l,v,u)=>`<div class="row"><span class="rl">${l}</span><b>${v}<small>${u}</small></b></div>`;
+  return `<section class="card"><h3>Solar panels right now</h3><div class="panels">${cells}</div></section>
+    <section class="card"><h3>Array</h3><div class="rows">${row('Reporting','24','of 24')}${row('Array output',kw(m.solar),'kW')}
+    ${row('Typical panel',med,'W')}${asleep?row('Status','Asleep','until sunrise'):row('Needs a look','Panel 8','low output')}</div></section>`;
+}
+
+/* ================= layouts ================= */
+const PAGES=['Now','Today','History','Panels'];
+const LAYOUT={
+  flow:m=>`<div class="main" style="grid-template-columns:1fr 580px;grid-template-rows:1fr 216px">
+      ${flowCard(m)}<div class="col" style="grid-column:2;grid-row:1/-1">${backupCard(m)}${todayCard(m)}</div>
+      <div style="grid-column:1;grid-row:2;display:flex;min-height:0;min-width:0">${powerCard(m).replace('class="card"','class="card" style="flex:1"')}</div></div>`,
+  tiles:m=>`<div class="main" style="grid-template-rows:282px 1fr 176px">
+      <div class="rowg" style="grid-template-columns:repeat(4,1fr)">${tiles(m)}</div>
+      <div class="rowg" style="grid-template-columns:2fr 1fr">${powerCard(m)}${socCard(m)}</div>
+      <div class="rowg" style="grid-template-columns:1.7fr 1fr 1fr">${backupCard(m,true)}${excessCard(m)}${tomorrowCard(m)}</div></div>`,
+  split:m=>`<div class="main" style="grid-template-columns:860px 1fr">
+      ${flowCard(m)}
+      <div class="rowg" style="grid-template-rows:1fr 306px 150px">${powerCard(m)}
+        <div class="rowg" style="grid-template-columns:1fr 1fr">${socCard(m)}${todayCard(m,false)}</div>${backupCard(m,true)}</div></div>`,
+  pages:m=>{
+    const p=state.p, body=[
+      ()=>`<div class="rowg" style="grid-template-columns:1fr 560px">${flowCard(m)}<div class="col">
+          ${heroCard(m.outage?'Backup remaining':'Backup if the grid goes down',hrs(m.backup.now),'h','at current use, with no solar')}
+          ${heroCard('Self-powered today',m.selfPct,'%',`${k1(m.impKwh)} kWh bought · ${k1(m.expKwh)} kWh sold`)}
+          ${heroCard('Excess today',sgn(m.excess),'kWh',`Solar ${k1(m.solarKwh)} − home ${k1(m.homeKwh)} kWh`,m.excess>=.05?'pos':'')}</div></div>`,
+      ()=>`<div class="rowg" style="grid-template-rows:1fr 356px">${powerCard(m)}<div class="rowg" style="grid-template-columns:1fr 580px">${socCard(m)}${todayCard(m)}</div></div>`,
+      ()=>`<div class="rowg" style="grid-template-columns:1fr 500px">${weekCards(m)}</div>`,
+      ()=>`<div class="rowg" style="grid-template-columns:1fr 500px">${panelCards(m)}</div>`,
+    ][p]();
+    const pills=PAGES.map((n,i)=>`<button class="pg${state.rot?' run':''}" data-page="${i}" ${i===p?'aria-current="true"':''}>${n}</button>`).join('');
+    return `<div class="main" style="grid-template-rows:1fr 52px">${body}<nav class="pager" aria-label="Pages">${pills}</nav></div>`;
+  },
+};
+
+/* ================= state, render, controls ================= */
+const ROT_MS=8000;
+const q=new URLSearchParams(location.hash.slice(1));
+const state={l:q.get('l')||'flow',s:q.get('s')||'sunny',t:q.get('t')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'),
+  p:+(q.get('p')||0)%4,k:q.get('k')==='1',rot:q.get('r')!=='0',tp:0};
+if(!LAYOUT[state.l])state.l='flow'; if(!SCEN[state.s])state.s='sunny'; if(state.t!=='dark')state.t='light';
+let timer=null, tpTimer=null, M=null;
+function updateTotals(){const el=stage.querySelector('[data-tot]'); if(el&&M)el.innerHTML=totInner(M,el.dataset.tot==='1')}
+function startTot(){clearInterval(tpTimer); if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  tpTimer=setInterval(()=>{const el=stage.querySelector('[data-tot]'); if(!el||el.matches(':hover'))return; state.tp=(state.tp+1)%4; updateTotals()},TP_MS)}
+
+function render(){
+  document.documentElement.dataset.theme=state.t;
+  document.body.classList.toggle('kiosk',state.k);
+  const m=model(state.s); M=m;
+  stage.style.setProperty('--rot',ROT_MS+'ms');
+  stage.innerHTML=header(m)+banner(m)+LAYOUT[state.l](m)+wxStrip(m)+'<div class="tip" id="tip"></div>';
+  tip=document.getElementById('tip');
+  stage.querySelectorAll('[data-chart]').forEach(el=>CHARTS[el.dataset.chart](el,m));
+  document.querySelectorAll('.seg').forEach(seg=>seg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(state[seg.dataset.k]===b.dataset.v))));
+  document.getElementById('rotwrap').style.display=state.l==='pages'?'':'none';
+  document.getElementById('rot').checked=state.rot;
+  const h=new URLSearchParams({l:state.l,s:state.s,t:state.t});
+  if(state.l==='pages'){h.set('p',state.p); if(!state.rot)h.set('r','0')}
+  if(state.k)h.set('k','1');
+  history.replaceState(null,'','#'+h);
+  clearTimeout(timer);
+  if(state.l==='pages'&&state.rot&&!matchMedia('(prefers-reduced-motion: reduce)').matches)
+    timer=setTimeout(()=>{state.p=(state.p+1)%4;render()},ROT_MS);
+  startTot();
+}
+function fit(){
+  const vp=document.getElementById('vp');
+  if(state.k) scale=Math.min(innerWidth/1920,innerHeight/1080);
+  else{
+    const rb=document.getElementById('rb').offsetHeight, byW=(innerWidth-32)/1920, byH=(innerHeight-rb-110)/1080;
+    scale=Math.max(.15,Math.min(1.5,byW,byH>.3?byH:byW));
+  }
+  stage.style.transform=`scale(${scale})`; vp.style.width=1920*scale+'px'; vp.style.height=1080*scale+'px';
+}
+document.querySelectorAll('.seg').forEach(seg=>seg.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return; state[seg.dataset.k]=b.dataset.v; if(seg.dataset.k==='l')state.p=0; render(); fit()}));
+document.getElementById('rot').addEventListener('change',e=>{state.rot=e.target.checked;render()});
+stage.addEventListener('click',e=>{const b=e.target.closest('[data-page]'); if(b){state.p=+b.dataset.page;render();return}
+  const d=e.target.closest('[data-tp]'), c=e.target.closest('[data-tot]');
+  if(d||c){state.tp=d?+d.dataset.tp:(state.tp+1)%4; updateTotals(); startTot()}});
+stage.addEventListener('mousemove',e=>{const t=e.target.closest('[data-tip]'); if(t)showTip(e,t.dataset.tip); else if(!e.target.closest('.ov'))hideTip()});
+stage.addEventListener('mouseleave',hideTip);
+function setKiosk(on){state.k=on;render();fit();
+  if(on&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(()=>{});
+  if(!on&&document.fullscreenElement)document.exitFullscreen().catch(()=>{})}
+document.getElementById('kiosk').addEventListener('click',()=>setKiosk(true));
+document.getElementById('exit').addEventListener('click',()=>setKiosk(false));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.k)setKiosk(false)});
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&state.k&&exitArmed)setKiosk(false); exitArmed=!!document.fullscreenElement});
+let exitArmed=false, exitT=null;
+document.addEventListener('pointermove',e=>{if(!state.k||!(e.movementX||e.movementY))return;document.body.classList.add('showexit');clearTimeout(exitT);
+  exitT=setTimeout(()=>document.body.classList.remove('showexit'),2500)});
+addEventListener('resize',fit);
+render(); fit();
+</script>
+</body>
+</html>
