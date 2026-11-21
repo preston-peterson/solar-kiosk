@@ -53,13 +53,16 @@ making less than the sunlight allows).
 `solar-kiosk serve` runs the solar page on port 8080. Open it from any computer or phone on the home
 network. Until it's set up, it shows a demo and an **Open settings** button (and a QR code for phones).
 
-The first person to open Settings creates a **settings password**; each computer or phone asks for it once.
-Then enter the Enphase and FranklinWH app logins and save. The Enphase gateway, the aGate and the Tempest
-are found automatically.
+**Step-by-step guide: [docs/setup.md](docs/setup.md).** In short:
+
+1. The first person to open Settings creates a **settings password**. Each computer or phone asks for it once.
+2. **Enphase:** make a token on Enphase's website and paste it in, so the app never needs your Enphase
+   password. (Your Enphase email and password also work.) The gateway is found automatically.
+3. **FranklinWH:** the email and password from the FranklinWH app.
+4. **Tempest:** found automatically.
+5. Click **Save and start**.
 
 Forgot the settings password? Reset it from the Pi's own screen, or run `solar-kiosk reset-password` on the Pi.
-
-Settings live in `~/.config/solar-kiosk/`, readable only by the app.
 
 **Security:** solar-kiosk is made for a home network: anyone on it can view the page, and only the settings
 password opens Settings. It uses plain HTTP, so **never open its port to the internet**. What's stored, the

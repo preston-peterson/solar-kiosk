@@ -25,10 +25,15 @@ class ConfigError(Exception):
 class EnphaseConfig:
     host: str = ""  # empty: found automatically on the network
     serial: str = ""  # filled in once found; used to find the gateway again if its address changes
-    username: str = ""
+    username: str = ""  # either an email and password (the app renews the gateway's token itself) ...
     password: str = ""
-    token: str = ""  # optional: a token from Enphase's site, for accounts with MFA
+    token: str = ""  # ... or a token the owner made on Enphase's token site, so the app never sees a password
     poll_s: float = 15
+
+    @property
+    def uses_token(self) -> bool:
+        """True when the owner pasted a token and no login is saved: nothing renews it but them."""
+        return bool(self.token) and not (self.username and self.password)
 
 
 @dataclass(frozen=True)

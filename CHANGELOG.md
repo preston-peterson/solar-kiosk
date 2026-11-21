@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Enphase now connects with a token you make on Enphase's own website, so the app never needs your Enphase
+  password. The settings page walks through it step by step and finds the gateway's serial number for you. A
+  token lasts a year, and the solar page reminds you a month before it runs out. Email and password still work.
+- Every device on the settings page now has numbered, step-by-step instructions, and a new guide,
+  `docs/setup.md`, covers setup from start to finish, with what to do about each error message.
+
+### Fixed
+
+- After saving, reopening Settings showed Enphase and FranklinWH as switched off until the app restarted, and
+  saving again would really have switched them off.
+
 ## [0.1.0] - 2026-11-21
 
 First release. The installer, the settings page and the device readers are complete. The solar page itself is a

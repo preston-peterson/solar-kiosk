@@ -50,12 +50,27 @@
   #forgot { display: none; }
   .local #forgot { display: inline-block; }
   .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  ol.steps { list-style: none; counter-reset: step; padding: 0; margin: 14px 0 0; }
+  ol.steps > li { counter-increment: step; position: relative; padding: 2px 0 16px 40px; }
+  ol.steps > li::before { content: counter(step); position: absolute; left: 0; top: 0; width: 28px; height: 28px;
+           border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 15px;
+           display: grid; place-items: center; }
+  ol.steps > li > b:first-child { display: block; margin-bottom: 2px; }
+  ol.letters { list-style: lower-alpha; padding-left: 22px; margin: 8px 0 0; }
+  ol.letters li { margin: 4px 0; }
+  ol.overview { margin: 0 0 18px; padding-left: 22px; color: var(--muted); }
+  .note { font-size: 15px; color: var(--muted); background: var(--bg); border-radius: 10px; padding: 10px 12px; margin: 10px 0 0; }
+  .serial { font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .units small { display: block; font-weight: 500; font-size: 13px; color: var(--muted); }
+  #enphase .by-token, #enphase .by-password { display: none; }
+  #enphase.use-token .by-token, #enphase.use-password .by-password { display: block; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 </style>
 </head>
 <body>
 <main>
   <h1>Solar settings</h1>
-  <p class="lead">Connect to your solar, battery and weather station. Each one is tested as you go.
+  <p class="lead">Connect your solar panels, battery and weather station. Each one is tested as you go.
     <a href="/">Back to the solar page</a></p>
 
   <section id="create"><h2>First, create a settings password</h2>
@@ -78,32 +93,95 @@
   </section>
 
   <div id="form">
-    <section id="enphase">
+    <ol class="overview">
+      <li>Follow the steps for each device below. Untick <b>I have this</b> for any you don't have.</li>
+      <li>Then click <b>Save and start</b> at the bottom of the page.</li>
+    </ol>
+
+    <section id="enphase" class="use-token">
       <div class="head"><div><h2>Solar panels (Enphase)</h2>
-        <p class="sub">The email and password you use in the Enphase app.</p></div>
+        <p class="sub">Choose how the solar app signs in to your Enphase gateway.</p></div>
         <label class="switch"><input type="checkbox" data-have checked> I have this</label></div>
       <div class="fields">
-        <label for="e-user">Email</label><input id="e-user" type="email" autocomplete="username">
-        <label for="e-pass">Password</label><input id="e-pass" type="password" autocomplete="current-password">
-        <details><summary>Advanced</summary>
-          <label for="e-host">Gateway address (found automatically if blank)</label><input id="e-host" type="text" inputmode="decimal" placeholder="e.g. 192.0.2.10">
-          <label for="e-token">Access token (only for accounts with two-step sign-in)</label><input id="e-token" type="password">
+        <div class="units" role="radiogroup" aria-label="How to sign in to Enphase">
+          <label><input type="radio" name="e-use" value="token" checked> Token from Enphase<small>Recommended</small></label>
+          <label><input type="radio" name="e-use" value="password"> Email and password<small>Simpler, less private</small></label>
+        </div>
+
+        <ol class="steps by-token">
+          <li><b>Find your gateway</b>
+            The solar app looks for it on your home network. It doesn't sign in to anything.
+            <br><button class="quiet" id="e-find">Find my gateway</button>
+            <div class="result" id="e-found" role="status"></div>
+            <div class="choices"></div>
+            <p class="note">You can also see the serial number in the Enphase app: tap <b>Menu</b> (bottom right),
+              then <b>System</b>, <b>Devices</b>, <b>Gateway</b>. It's the number after <b>SN:</b></p></li>
+          <li><b>Make a token on Enphase's website</b>
+            This is easiest on a computer. Your Enphase password goes only to Enphase, never to the solar app.
+            <ol class="letters">
+              <li>Open <a href="https://entrez.enphaseenergy.com" target="_blank" rel="noopener noreferrer">entrez.enphaseenergy.com</a> (it opens in a new tab).</li>
+              <li>Click <b>Login</b>, then sign in with the email and password you use in the Enphase app.</li>
+              <li>From the lists, choose your system's name, then your gateway's serial number<span class="e-serial-hint"></span>.</li>
+              <li>Click <b>Create access token</b>.</li>
+              <li>In the window that opens, click <b>Copy and close</b>.</li>
+            </ol></li>
+          <li><b>Paste the token here</b>
+            <label for="e-token" class="sr">Token</label>
+            <input id="e-token" type="password" autocomplete="off" spellcheck="false" placeholder="Paste the token">
+            <p class="note" id="e-token-saved" hidden></p></li>
+          <li><b>Click Connect</b>This checks that the token works.
+            <br><button data-connect>Connect</button>
+            <div class="result" data-out role="status"></div></li>
+        </ol>
+        <p class="note by-token">A token lasts a year. About a month before it runs out, the solar page shows a
+          reminder. Then repeat steps 2 to 4.</p>
+        <details class="by-token"><summary>Something went wrong?</summary>
+          <p><b>"Couldn't find an Enphase gateway":</b> the solar app has to be on the same home network as the
+            gateway. You can still type the serial number from the Enphase app in step 2, and the gateway's address
+            under <b>More options</b>.</p>
+          <p><b>"Made with an installer's account":</b> if you installed the system yourself, Enphase treats your
+            account as an installer's, and its tokens only last 12 hours. Use <b>Email and password</b> instead, or
+            ask Enphase Support to change your account to a homeowner account.</p>
+          <p><b>"The gateway didn't accept that token":</b> check you chose this gateway's serial number in step 2,
+            then make a new token and paste it again.</p>
         </details>
-        <button data-connect>Connect</button>
-        <div class="result" role="status"></div>
-        <div class="choices"></div>
+
+        <ol class="steps by-password">
+          <li><b>Type the email and password you use in the Enphase app</b>
+            <label for="e-user">Email</label><input id="e-user" type="email" autocomplete="username">
+            <label for="e-pass">Password</label><input id="e-pass" type="password" autocomplete="current-password">
+            <p class="note">They're kept on the solar app's device, and sent only to Enphase, so the app can get a
+              new token by itself every year. If your Enphase account asks for a code from your phone when you sign
+              in, this won't work: use <b>Token from Enphase</b> instead.</p></li>
+          <li><b>Click Connect</b>It finds your gateway on your home network and checks the login. This takes up
+            to a minute.
+            <br><button data-connect>Connect</button>
+            <div class="result" data-out role="status"></div>
+            <div class="choices"></div></li>
+        </ol>
+
+        <details><summary>More options</summary>
+          <label for="e-host">Gateway address (only if it isn't found by itself)</label>
+          <input id="e-host" type="text" inputmode="decimal" placeholder="e.g. 192.0.2.10">
+        </details>
       </div>
     </section>
 
     <section id="franklin">
       <div class="head"><div><h2>Battery (FranklinWH)</h2>
-        <p class="sub">The email and password you use in the FranklinWH app.</p></div>
+        <p class="sub">Uses the same login as the FranklinWH app.</p></div>
         <label class="switch"><input type="checkbox" data-have checked> I have this</label></div>
       <div class="fields">
-        <label for="f-user">Email</label><input id="f-user" type="email" autocomplete="username">
-        <label for="f-pass">Password</label><input id="f-pass" type="password" autocomplete="current-password">
-        <button data-connect>Connect</button>
-        <div class="result" role="status"></div>
+        <ol class="steps">
+          <li><b>Type the email and password you use in the FranklinWH app</b>
+            <label for="f-user">Email</label><input id="f-user" type="email" autocomplete="username">
+            <label for="f-pass">Password</label><input id="f-pass" type="password" autocomplete="current-password">
+            <p class="note">The battery is read through FranklinWH's servers, so the solar app needs the internet.
+              The login is kept on the solar app's device, and sent only to FranklinWH.</p></li>
+          <li><b>Click Connect</b>It signs in to FranklinWH and shows your battery's charge.
+            <br><button data-connect>Connect</button>
+            <div class="result" data-out role="status"></div></li>
+        </ol>
       </div>
     </section>
 
@@ -112,8 +190,14 @@
         <p class="sub">Found automatically. Nothing to type.</p></div>
         <label class="switch"><input type="checkbox" data-have checked> I have this</label></div>
       <div class="fields">
-        <button class="quiet" data-connect>Look for it</button>
-        <div class="result" role="status"></div>
+        <ol class="steps">
+          <li><b>Check the Tempest hub is plugged in and set up</b>
+            It should already be working in the Tempest app, on the same home network (the same Wi-Fi or router) as
+            the solar app.</li>
+          <li><b>Click Look for it</b>The solar app listens for the hub for up to 15 seconds.
+            <br><button class="quiet" data-connect>Look for it</button>
+            <div class="result" data-out role="status"></div></li>
+        </ol>
       </div>
     </section>
 
@@ -186,41 +270,86 @@ for (const id of ['enphase', 'franklin', 'tempest']) {
   box.addEventListener('change', () => $('#' + id).classList.toggle('off', !box.checked));
 }
 
-async function connect(id, extra = {}) {
-  const sec = $('#' + id), btn = $('[data-connect]', sec), out = $('.result', sec);
-  const body = id === 'enphase'
-    ? { username: $('#e-user').value, password: $('#e-pass').value, host: $('#e-host').value,
-        token: $('#e-token').value, ...extra }
-    : id === 'franklin' ? { email: $('#f-user').value, password: $('#f-pass').value } : {};
-  btn.disabled = true;
-  show(out, 'wait', id === 'tempest' ? 'Listening for the weather station…' : 'Connecting…',
-       id === 'enphase' ? ' Looking for the gateway on your network. This takes up to a minute.' : '');
-  try {
-    const r = await api('/api/setup/' + id, body);
-    show(out, r.ok ? 'ok' : 'bad', (r.ok ? '✓ ' : '✗ ') + r.title, r.detail ? ' ' + r.detail : '');
-    if (r.ok) found[id] = r.data || {};
-    if (id === 'enphase') choices(r.data && r.data.choices);
-  } catch (e) { if (e.message !== 'locked') show(out, 'bad', '✗ Lost contact with the solar app', ' Check this device is on the home network.'); }
-  btn.disabled = false;
+// --- Enphase: a token (recommended) or the email and password ---------------------------------------
+function eUse() { return $('input[name=e-use]:checked').value; }
+function setUse(use) {
+  $('input[name=e-use][value=' + use + ']').checked = true;
+  $('#enphase').classList.toggle('use-token', use === 'token');
+  $('#enphase').classList.toggle('use-password', use === 'password');
+}
+for (const r of document.querySelectorAll('input[name=e-use]')) r.addEventListener('change', () => setUse(eUse()));
+
+function longDate(iso) { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+function gatewayPicked(g) {  // remember which gateway, and show its serial where step 2 asks for it
+  found.enphase = { host: g.host || '', serial: g.serial || '' };
+  const hint = $('.e-serial-hint'); hint.replaceChildren();
+  if (g.serial) {
+    const b = document.createElement('span'); b.className = 'serial'; b.textContent = g.serial;
+    hint.append(' (yours is ', b, ')');
+  }
+}
+$('#e-host').addEventListener('input', () => gatewayPicked({ host: $('#e-host').value.trim() }));
+
+function enphaseBody(extra = {}) {
+  const base = { use: eUse(), host: found.enphase.host || '', serial: found.enphase.serial || '' };
+  return eUse() === 'token' ? { ...base, token: $('#e-token').value.trim(), ...extra }
+                            : { ...base, username: $('#e-user').value, password: $('#e-pass').value, ...extra };
 }
 
-function choices(list) {
-  const box = $('#enphase .choices'); box.replaceChildren();
+function choices(box, list, onPick) {
+  box.replaceChildren();
   for (const g of list || []) {
     const b = document.createElement('button');
     b.textContent = 'Gateway ' + (g.serial || '(no serial)') + ' at ' + g.host;
-    b.onclick = () => connect('enphase', { host: g.host, serial: g.serial });
+    b.onclick = () => onPick(g);
     box.append(b);
   }
 }
 
-for (const id of ['enphase', 'franklin', 'tempest']) $('#' + id + ' [data-connect]').onclick = () => connect(id);
+$('#e-find').onclick = async () => {
+  const btn = $('#e-find'), out = $('#e-found'), box = $('#enphase ol.by-token .choices');
+  btn.disabled = true;
+  show(out, 'wait', 'Looking for the gateway…', ' This takes a few seconds.');
+  try {
+    const r = await api('/api/setup/enphase/find', {});
+    show(out, r.ok ? 'ok' : 'bad', (r.ok ? '✓ ' : '✗ ') + r.title, r.detail ? ' ' + r.detail : '');
+    if (r.ok) gatewayPicked(r.data);
+    choices(box, r.data && r.data.choices, g => {
+      gatewayPicked(g); box.replaceChildren();
+      show(out, 'ok', '✓ Picked gateway ' + (g.serial || g.host), ' Use this serial number in step 2.');
+    });
+  } catch (e) { if (e.message !== 'locked') show(out, 'bad', '✗ Lost contact with the solar app', ' Check this device is on the home network.'); }
+  btn.disabled = false;
+};
+
+// --- Connect buttons ------------------------------------------------------------------------------
+async function connect(id, extra = {}) {
+  const box = id === 'enphase' ? $('#enphase ol.by-' + eUse()) : $('#' + id);
+  const btn = $('[data-connect]', box), out = $('[data-out]', box);
+  const body = id === 'enphase' ? enphaseBody(extra)
+    : id === 'franklin' ? { email: $('#f-user').value, password: $('#f-pass').value } : {};
+  btn.disabled = true;
+  show(out, 'wait', id === 'tempest' ? 'Listening for the weather station…' : 'Connecting…',
+       id === 'enphase' && !body.host ? ' Looking for the gateway on your network. This takes up to a minute.' : '');
+  try {
+    const r = await api('/api/setup/' + id, body);
+    show(out, r.ok ? 'ok' : 'bad', (r.ok ? '✓ ' : '✗ ') + r.title, r.detail ? ' ' + r.detail : '');
+    if (r.ok) found[id] = r.data || {};
+    if (id === 'enphase') {
+      if (r.ok) gatewayPicked(r.data);
+      choices($('.choices', box), r.data && r.data.choices, g => connect('enphase', { host: g.host, serial: g.serial }));
+    }
+  } catch (e) { if (e.message !== 'locked') show(out, 'bad', '✗ Lost contact with the solar app', ' Check this device is on the home network.'); }
+  btn.disabled = false;
+}
+
+for (const btn of document.querySelectorAll('[data-connect]')) btn.onclick = () => connect(btn.closest('section').id);
 
 $('#save').onclick = async () => {
   const out = $('#saved'), units = $('input[name=units]:checked').value;
   const body = {
-    enphase: have('enphase') ? { username: $('#e-user').value, password: $('#e-pass').value, token: $('#e-token').value,
-      host: found.enphase.host || $('#e-host').value, serial: found.enphase.serial || '' } : null,
+    enphase: have('enphase') ? enphaseBody() : null,
     franklin: have('franklin') ? { email: $('#f-user').value, password: $('#f-pass').value,
       gateway_id: found.franklin.gateway_id || '' } : null,
     tempest: { enabled: have('tempest'), serial: found.tempest.serial || '' },
@@ -246,8 +375,14 @@ $('#save').onclick = async () => {
     return;
   }
   const pw = (el, has) => { if (has) el.placeholder = 'Saved (leave blank to keep it)'; };
+  setUse(s.enphase.use);
   $('#e-user').value = s.enphase.username; $('#e-host').value = s.enphase.host; pw($('#e-pass'), s.enphase.has_password);
-  found.enphase = { host: s.enphase.host, serial: s.enphase.serial };
+  gatewayPicked({ host: s.enphase.host, serial: s.enphase.serial });
+  if (s.enphase.has_token) {
+    $('#e-token').placeholder = 'Saved (paste a new one to replace it)';
+    const note = $('#e-token-saved'); note.hidden = false;
+    note.textContent = 'A token is saved' + (s.enphase.token_expires ? '. It lasts until ' + longDate(s.enphase.token_expires) + '.' : '.');
+  }
   $('#f-user').value = s.franklin.email; pw($('#f-pass'), s.franklin.has_password);
   found.franklin = { gateway_id: s.franklin.gateway_id };
   found.tempest = { serial: s.tempest.serial };

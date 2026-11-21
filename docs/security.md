@@ -9,8 +9,11 @@ reasonable for a home app. It also covers how to reduce them further if you want
 
 - Anyone on your home network can **view** the solar page. Only someone with the **settings password** can
   change settings or logins.
-- Your Enphase and FranklinWH logins are stored **on the Pi only**, in a file that only the app can read.
-  They're sent only to Enphase and FranklinWH, over encrypted connections.
+- For Enphase, the recommended setup uses a **token you make on Enphase's own website**, so your Enphase
+  password never reaches the app. FranklinWH still needs the FranklinWH app's login.
+- Whatever you enter is stored **on the Pi only**, in a file that only the app can read. Logins are sent only
+  to Enphase and FranklinWH, over encrypted connections. The Enphase token is sent only to your gateway, on
+  your home network.
 - The settings password itself is **never stored**, only a scrambled form of it (a hash).
 - The page uses plain `http://`, not `https://`, so things typed into it are **not encrypted** on your home
   network. That's normal for home devices, and it's the main reason this app must **never be opened to the
@@ -26,9 +29,9 @@ same files sit in `~/.config/solar-kiosk/` and `~/.local/state/solar-kiosk/`.)
 
 | File (installed on a Pi) | What's in it | Who can read it |
 |---|---|---|
-| `/var/lib/solar-kiosk/config/solar-kiosk/secrets.toml` | Enphase email and password (or token); FranklinWH email and password | Only the `solar-kiosk` user (file mode 600) |
+| `/var/lib/solar-kiosk/config/solar-kiosk/secrets.toml` | The Enphase token, or the Enphase email and password if you chose those instead; the FranklinWH email and password | Only the `solar-kiosk` user (file mode 600) |
 | `/var/lib/solar-kiosk/config/solar-kiosk/auth.json` | The settings password **as a scrypt hash** (never the password), and the current sign-in key | Only `solar-kiosk` (600) |
-| `/var/lib/solar-kiosk/state/solar-kiosk/enphase-token` | The access token the Enphase gateway issued, cached so the app doesn't sign in to Enphase on every start | Only `solar-kiosk` (600) |
+| `/var/lib/solar-kiosk/state/solar-kiosk/enphase-token` | Only with an Enphase email and password: the token Enphase issued, cached so the app doesn't sign in to Enphase on every start. Deleted when you switch to a token. | Only `solar-kiosk` (600) |
 | `/var/lib/solar-kiosk/config/solar-kiosk/config.toml` | Gateway address, serial numbers, units: no passwords | Only `solar-kiosk` (inside its 700 folder) |
 
 The program itself is in `/opt/solar-kiosk/`, owned by root, so the app can't modify its own code. The service
@@ -68,12 +71,23 @@ readable by other users. Files are replaced whole, so a power cut can't leave on
 - **Forgot it?** Reset it from the Pi's own screen (the reset button appears only there), or run
   `solar-kiosk reset-password` on the Pi. The next person to open Settings then creates a new one.
 
-**Your Enphase login**
+**Signing in to Enphase**
 
-- On current gateways (firmware 7 or later), the app uses your Enphase login once, over HTTPS, to get an
-  access token from Enphase. After that it talks only to the gateway on your network and reuses the token
-  until it expires.
-- Accounts that use two-step sign-in can paste a token instead of a password.
+Current gateways (firmware 7 or later) only answer apps that show them a token. There are two ways to get one:
+
+- **A token you make yourself (recommended).** You sign in on Enphase's own website
+  (entrez.enphaseenergy.com), make a token for your gateway, and paste it into Settings. Your Enphase password
+  goes only to Enphase, never to the app.
+  - The app sends the token only to your gateway, on your home network.
+  - It's made for your gateway, and it doesn't contain your password. Anyone who copies it could read your
+    gateway until it runs out, so it gets the same care as a password.
+  - A token made with a homeowner's account lasts one year. The app reads its expiry date and shows a
+    reminder on the solar page a month before. Tokens made with an installer's account last only 12 hours,
+    so the settings page won't accept them.
+  - Switching to a token deletes the Enphase email and password from the Pi, if they were saved.
+- **Your Enphase email and password.** The app uses them over HTTPS to get a token from Enphase, then talks
+  only to the gateway and reuses the token until it expires. It renews the token by itself, so nobody has
+  to remember. This doesn't work for accounts that ask for a code from a phone when signing in.
 
 **Your FranklinWH login**
 
@@ -97,8 +111,8 @@ looking after it.
 
 **1. The page uses plain HTTP on your home network.**
 
-- **Risk:** the settings password, the device logins (when typed into Settings) and the sign-in cookie cross
-  your home network unencrypted. Someone already on your network, with the right tools, could capture them.
+- **Risk:** the settings password, the device logins and the Enphase token (when typed into Settings), and
+  the sign-in cookie, cross your home network unencrypted. Someone already on your network, with the right tools, could capture them.
 - **Why it's acceptable:** the traffic never leaves your home. Your Wi-Fi encrypts it over the air, and your
   router keeps the internet out. Proper HTTPS on a home device needs a certificate that browsers would warn
   about, and asking non-technical people to click past security warnings teaches a worse habit.
@@ -107,17 +121,20 @@ looking after it.
   - keep visitors on a guest Wi-Fi
   - change the settings password if you think someone untrusted has been on your network
 
-**2. The device logins are stored unencrypted on the Pi.**
+**2. The device logins and the Enphase token are stored unencrypted on the Pi.**
 
-- **Risk:** anyone who gets the SD card, or a login on the Pi, can read your Enphase and FranklinWH logins.
+- **Risk:** anyone who gets the SD card, or a login on the Pi, can read what's saved: the Enphase token (or
+  your Enphase login), and your FranklinWH login.
 - **Why it's acceptable:** the app has to start by itself after a power cut. Encrypting the logins would mean
   keeping the key on the same card, which protects nothing. File permissions keep them away from other users
   on the Pi. This is how most home automation software stores logins.
 - **To reduce it:**
+  - use an Enphase token instead of your Enphase password: then the Pi holds no Enphase password at all
   - keep the Pi inside your home
   - use a password for Enphase and FranklinWH that you don't use anywhere else
   - give your own login on the Pi a strong password: anyone with administrator rights on the Pi can read the logins
-  - if the Pi or its card is lost or stolen, change both passwords
+  - if the Pi or its card is lost or stolen, change your FranklinWH password, and your Enphase password if it
+    was saved
 
 **3. Anyone on your network can view the solar page.**
 

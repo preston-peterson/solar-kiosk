@@ -170,7 +170,8 @@ def test_save_switches_from_demo_to_live(tmp_path):
         assert saved.franklin.email == "you@example.com" and saved.enphase is None and saved.units == "metric"
         state = await (await client.get("/api/setup/state")).json()
         assert state["franklin"]["has_password"] and "pw" not in str(state)
-        assert state["enphase"]["off"]
+        assert state["enphase"]["off"] and not state["franklin"]["off"]  # reopening Settings shows it on
+        assert app.config.franklin_missing != "Off in the settings"
 
     with_client(tmp_path, test)
 

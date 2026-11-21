@@ -8,11 +8,13 @@ import logging
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from .backoff import LoginBackoff
 from .discover import FoundGateway, find_enphase, find_tempest, pick_gateway
+from .enphase_token import day, read_token, unusable
 
 log = logging.getLogger(__name__)
 
@@ -30,44 +32,76 @@ def kw(w: float | None) -> str:
     return "—" if w is None else f"{abs(w) / 1000:.1f} kW"
 
 
+async def find_enphase_gateway(*, serial: str = "",
+                               discover: Callable[[], Awaitable[list[FoundGateway]]] = find_enphase) -> Result:
+    """Look for the gateway on the home network. No login: the first step of setting up Enphase."""
+    found = await discover()
+    gw = pick_gateway(found, serial)
+    if gw is None:
+        if not found:
+            return Result(False, "Couldn't find an Enphase gateway",
+                          "The solar app has to be on the same home network as the gateway (the same Wi-Fi or "
+                          "router). Check the gateway's lights are on, then try again. You can also type its "
+                          "address under More options.", {"not_found": True})
+        choices = [{"host": g.host, "serial": g.serial} for g in found]
+        return Result(False, f"Found {len(found)} Enphase gateways", "Pick yours below.", {"choices": choices})
+    return Result(True, "Found your Enphase gateway",
+                  f"Its serial number is {gw.serial}." if gw.serial else "", {"host": gw.host, "serial": gw.serial})
+
+
 async def check_enphase(username: str, password: str, *, state_dir: Path, host: str = "", serial: str = "",
                         token: str = "", discover: Callable[[], Awaitable[list[FoundGateway]]] = find_enphase,
-                        envoy_factory: Callable[[str], Any] | None = None) -> Result:
+                        envoy_factory: Callable[[str], Any] | None = None,
+                        now: Callable[[], datetime] = lambda: datetime.now(timezone.utc)) -> Result:
+    """Try the gateway with a pasted token (when no email and password are given) or with the Enphase login."""
     from pyenphase.exceptions import EnvoyAuthenticationError, EnvoyAuthenticationRequired
 
     from .sources.enphase import EnphaseGateway
 
+    use_token = bool(token) and not (username and password)
+    info = None
+    if use_token:
+        try:
+            info = read_token(token)
+        except ValueError as exc:
+            return Result(False, "That isn't a whole token", str(exc))
+        if why := unusable(info, now()):
+            return Result(False, "That token can't be used", why)
     if not host:
-        found = await discover()
-        gw = pick_gateway(found, serial)
-        if gw is None:
-            if not found:
-                return Result(False, "Couldn't find an Enphase gateway",
-                              "The solar app has to be on the same home network as the gateway (the same Wi-Fi or "
-                              "router). Check the gateway's lights are on, then try again. You can also type its "
-                              "address below.", {"not_found": True})
-            choices = [{"host": g.host, "serial": g.serial} for g in found]
-            return Result(False, f"Found {len(found)} Enphase gateways", "Pick yours below.", {"choices": choices})
-        host, serial = gw.host, gw.serial
+        where = await find_enphase_gateway(serial=serial, discover=discover)
+        if not where.ok:
+            return where
+        host, serial = where.data["host"], where.data["serial"]
 
     kwargs = {"envoy_factory": envoy_factory} if envoy_factory else {}
-    gateway = EnphaseGateway(host, username, password, state_dir / "enphase-token", serial=serial, token=token,
-                             backoff=LoginBackoff("Enphase", 0), **kwargs)
+    if use_token:  # test only the pasted token, not one cached from an earlier login
+        gateway = EnphaseGateway(host, "", "", None, serial=serial, token=token,
+                                 backoff=LoginBackoff("Enphase", 0), **kwargs)
+    else:
+        gateway = EnphaseGateway(host, username, password, state_dir / "enphase-token", serial=serial,
+                                 backoff=LoginBackoff("Enphase", 0), **kwargs)
     try:
         reading = await asyncio.wait_for(gateway.read(), 45)
     except (EnvoyAuthenticationError, EnvoyAuthenticationRequired):
+        if use_token:  # nothing was sent to Enphase's servers, so no account can be locked: not counted
+            which = f" (serial {gateway.serial})" if gateway.serial else ""
+            return Result(False, "The gateway didn't accept that token",
+                          f"Check you picked this gateway{which} on Enphase's token site and copied the whole "
+                          "token, then make a new one and paste it again.")
         return Result(False, "Enphase didn't accept that email and password",
-                      "Use the email and password for the Enphase app. If that account uses a code sent to "
-                      "your phone (two-step sign-in), this can't log in by itself; ask for help with a token.",
-                      login_failed=True)
+                      "Use the email and password for the Enphase app. If that account asks for a code from your "
+                      "phone when you sign in (two-step sign-in), use a token instead.", login_failed=True)
     except Exception as exc:  # unreachable, timed out, unexpected reply
         log.info("Enphase check failed: %r", exc)
         return Result(False, f"Found the gateway at {host}, but it didn't answer",
                       "Wait a minute and try again. If it keeps happening, restart the gateway.")
     finally:
         await gateway.close()
-    return Result(True, "Connected to the Enphase gateway",
-                  f"Solar right now: {kw(reading.solar_w)}.", {"host": gateway.host, "serial": gateway.serial})
+    detail, data = f"Solar right now: {kw(reading.solar_w)}.", {"host": gateway.host, "serial": gateway.serial}
+    if info is not None and info.expires is not None:
+        detail += f" The token lasts until {day(info.expires)}."
+        data["token_expires"] = info.expires.isoformat()
+    return Result(True, "Connected to the Enphase gateway", detail, data)
 
 
 async def check_franklin(email: str, password: str, *, gateway_id: str = "",

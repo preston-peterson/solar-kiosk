@@ -13,7 +13,7 @@ import json
 import logging
 import socket
 from collections.abc import Awaitable, Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from importlib import resources
 from pathlib import Path
 from typing import Any
@@ -24,6 +24,7 @@ from aiohttp import web
 from . import __version__, checks
 from . import config as cfg
 from .auth import Auth, AuthError
+from .enphase_token import read_token, reminder, unusable
 from .models import Snapshot
 from .poller import Poller
 from .runner import build_demo, build_live
@@ -56,6 +57,19 @@ def to_json(data: Any) -> str:
 
 def is_set_up(c: cfg.Config | None) -> bool:
     return c is not None and (c.enphase is not None or c.franklin is not None)
+
+
+def enphase_use(body: dict, saved: cfg.EnphaseConfig) -> str:
+    """Which Enphase sign-in the settings page chose: "token" or "password". Older pages don't say, so then
+    it's whatever they sent, or what's saved."""
+    use = body.get("use")
+    if use in ("token", "password"):
+        return use
+    if body.get("token"):
+        return "token"
+    if body.get("username") or body.get("password"):
+        return "password"
+    return "token" if saved.uses_token or not saved.username else "password"
 
 
 def is_local(request: web.Request) -> bool:
@@ -141,9 +155,19 @@ class App:
         out = []
         if self.config_error:
             out.append(f"Settings problem: {self.config_error}")
+        token_ran_out = False
+        if self.config and self.config.enphase and self.config.enphase.uses_token:
+            now = datetime.now(timezone.utc)
+            try:
+                info = read_token(self.config.enphase.token)
+                note, token_ran_out = reminder(info, now), info.expires is not None and info.expires <= now
+            except ValueError:
+                note = "The saved Enphase token can't be read. Open Settings to paste a new one."
+            if note:
+                out.append(note)
         s = self.snapshot
         if self.mode == "live" and s is not None:
-            if s.enphase_error and self.config and self.config.enphase:
+            if s.enphase_error and self.config and self.config.enphase and not token_ran_out:
                 out.append(f"Can't read the Enphase gateway: {s.enphase_error}")
             if s.franklin_error and self.config and self.config.franklin and s.franklin_updated is None:
                 out.append(f"Can't read the aGate: {s.franklin_error}")
@@ -153,13 +177,23 @@ class App:
         """The current settings for the setup page, without any passwords."""
         c = self.config or cfg.Config()
         e, f = c.enphase, c.franklin
+        token_expires = ""
+        if e and e.uses_token:
+            try:
+                expires = read_token(e.token).expires
+                token_expires = expires.isoformat() if expires else ""
+            except ValueError:
+                pass
         return {
             "mode": self.mode,
-            "enphase": {"on": e is not None, "username": e.username if e else "", "host": e.host if e else "",
-                        "serial": e.serial if e else "", "has_password": bool(e and (e.password or e.token)),
-                        "off": c.enphase_missing == "Off in the settings"},
+            "enphase": {"on": e is not None, "use": "password" if e and not e.uses_token else "token",
+                        "username": e.username if e else "", "host": e.host if e else "",
+                        "serial": e.serial if e else "", "has_password": bool(e and e.password),
+                        "has_token": bool(e and e.uses_token), "token_expires": token_expires,
+                        "off": e is None and c.enphase_missing == "Off in the settings"},
             "franklin": {"on": f is not None, "email": f.email if f else "", "gateway_id": f.gateway_id if f else "",
-                         "has_password": bool(f and f.password), "off": c.franklin_missing == "Off in the settings"},
+                         "has_password": bool(f and f.password),
+                         "off": f is None and c.franklin_missing == "Off in the settings"},
             "tempest": {"enabled": c.tempest.enabled, "serial": c.tempest.serial},
             "units": c.units,
         }
@@ -170,13 +204,19 @@ class App:
         enphase, e_missing = None, "Off in the settings"
         if (e := body.get("enphase")) is not None:
             prev = old.enphase or cfg.EnphaseConfig()
-            enphase = cfg.EnphaseConfig(
-                host=str(e.get("host", prev.host)).strip(), serial=str(e.get("serial", prev.serial)).strip(),
-                username=str(e.get("username") or prev.username).strip(),
-                password=str(e.get("password") or prev.password), token=str(e.get("token") or prev.token).strip(),
-                poll_s=prev.poll_s)
-            if not (enphase.username and enphase.password) and not enphase.token:
-                raise ValueError("Enter the Enphase email and password, or turn Enphase off.")
+            host, serial = str(e.get("host", prev.host)).strip(), str(e.get("serial", prev.serial)).strip()
+            if enphase_use(e, prev) == "token":  # keeps only the token: a saved email and password are deleted
+                token = str(e.get("token") or prev.token).strip()
+                if not token:
+                    raise ValueError("Paste the Enphase token, or turn Enphase off.")
+                if why := unusable(read_token(token), datetime.now(timezone.utc)):  # read_token: ValueError too
+                    raise ValueError(why)
+                enphase = cfg.EnphaseConfig(host=host, serial=serial, token=token, poll_s=prev.poll_s)
+            else:  # keeps only the email and password: the app makes and renews its own token
+                enphase = cfg.EnphaseConfig(host=host, serial=serial, username=str(e.get("username") or prev.username).strip(),
+                                            password=str(e.get("password") or prev.password), poll_s=prev.poll_s)
+                if not (enphase.username and enphase.password):
+                    raise ValueError("Enter the Enphase email and password, or turn Enphase off.")
         franklin, f_missing = None, "Off in the settings"
         if (f := body.get("franklin")) is not None:
             prev_f = old.franklin
@@ -193,6 +233,11 @@ class App:
         units = body.get("units", old.units)
         if units not in ("us", "metric"):
             raise ValueError("Units must be US or metric.")
+        # "Off in the settings" only for a device the page turned off, or Settings would show it off next time
+        if enphase is not None:
+            e_missing = cfg.Config.enphase_missing
+        if franklin is not None:
+            f_missing = cfg.Config.franklin_missing
         return cfg.Config(enphase, franklin, tempest, units, old.state_dir, e_missing, f_missing)
 
 
@@ -318,10 +363,21 @@ def make_web_app(app: App) -> web.Application:
     async def try_enphase(request):
         b = await request.json()
         saved = (app.config.enphase if app.config else None) or cfg.EnphaseConfig()
+        where = {"state_dir": app.state_dir, "host": str(b.get("host", "")).strip(),
+                 "serial": str(b.get("serial", "")).strip()}
+        if enphase_use(b, saved) == "token":
+            token = str(b.get("token") or saved.token).strip()
+            if not token:
+                return reply(checks.Result(False, "Paste the token first", "Follow steps 2 and 3 above to make one."))
+            return await run_check("enphase", "Enphase", checks.check_enphase("", "", token=token, **where))
         return await run_check("enphase", "Enphase", checks.check_enphase(
-            str(b.get("username") or saved.username).strip(), str(b.get("password") or saved.password),
-            state_dir=app.state_dir, host=str(b.get("host", "")).strip(), serial=str(b.get("serial", "")).strip(),
-            token=str(b.get("token") or saved.token).strip()))
+            str(b.get("username") or saved.username).strip(), str(b.get("password") or saved.password), **where))
+
+    @routes.post("/api/setup/enphase/find")
+    @guarded
+    async def find_enphase_gateway(request):  # step 1 of the walkthrough: no login involved
+        saved = (app.config.enphase if app.config else None) or cfg.EnphaseConfig()
+        return reply(await checks.find_enphase_gateway(serial=saved.serial))
 
     @routes.post("/api/setup/franklin")
     @guarded
@@ -347,7 +403,9 @@ def make_web_app(app: App) -> web.Application:
             return reply({"ok": False, "error": str(exc)}, 400)
         cfg.save(new, app.config_path)
         app.config_error = None
-        await app.use(new)
+        await app.use(new)  # stops the old reader first, so it can't write the cache below again
+        if new.enphase and new.enphase.uses_token:  # a token cached from an earlier email-and-password login
+            (app.state_dir / "enphase-token").unlink(missing_ok=True)
         return reply({"ok": True, "mode": app.mode})
 
     web_app = web.Application()

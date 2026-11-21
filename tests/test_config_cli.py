@@ -20,7 +20,8 @@ def conf(tmp_path):
 
 def test_example_files_load(conf):
     c = cfg.load(conf)
-    assert (c.enphase.host, c.enphase.username, c.enphase.poll_s) == ("192.0.2.10", "you@example.com", 15)
+    assert (c.enphase.host, c.enphase.token, c.enphase.poll_s) == ("192.0.2.10", "paste-the-token-here", 15)
+    assert c.enphase.uses_token and not c.enphase.username  # the example recommends a token
     assert (c.franklin.gateway_id, c.franklin.email, c.franklin.poll_s) == ("", "you@example.com", 30)
     assert (c.tempest.enabled, c.tempest.port, c.units) == (True, 50222, "us")
 

@@ -60,8 +60,10 @@ async def build_live(c: cfg.Config, config_path: Path | None = None, interval: f
             on_change(current)
 
     if c.enphase:
+        # with a pasted token there's nothing to cache: it's already in the secrets file
+        cache = None if c.enphase.uses_token else c.state_dir / "enphase-token"
         enphase = EnphaseGateway(c.enphase.host, c.enphase.username, c.enphase.password,
-                                 c.state_dir / "enphase-token", serial=c.enphase.serial, token=c.enphase.token,
+                                 cache, serial=c.enphase.serial, token=c.enphase.token,
                                  discover=find_enphase, on_found=remember)
     if c.franklin:
         franklin = FranklinCloud(c.franklin.email, c.franklin.password, c.franklin.gateway_id)

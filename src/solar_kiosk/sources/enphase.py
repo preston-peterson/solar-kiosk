@@ -1,8 +1,9 @@
 """Enphase IQ Gateway (Envoy) over the local network, through pyenphase (MIT).
 
-On firmware 7 and later the gateway needs a token, which pyenphase fetches from the Enphase cloud
-with the Enlighten login. The token lasts months, so it is cached on disk (mode 600) and the cloud
-is only contacted again when the gateway rejects it. Accounts with MFA can't fetch tokens this way.
+On firmware 7 and later the gateway needs a token. Either the owner makes one on Enphase's token site
+and pastes it into the settings (the recommended way: the app never sees their password, and the token
+lasts a year), or pyenphase fetches one from the Enphase cloud with the Enlighten login. A fetched token
+is cached on disk (mode 600), and the cloud is only contacted again when the gateway rejects it.
 """
 
 from __future__ import annotations
@@ -128,7 +129,7 @@ class EnphaseGateway:
                     log.info("An Enphase token was rejected")
             else:
                 if not self._username:
-                    raise EnvoyAuthenticationError("the Enphase token was rejected and no login is set")
+                    raise EnvoyAuthenticationError("the gateway didn't accept the token; make a new one in Settings")
                 await envoy.authenticate(username=self._username, password=self._password)
         except auth_errors as exc:
             self._backoff.failed(getattr(exc, "status", "") or str(exc) or type(exc).__name__)
