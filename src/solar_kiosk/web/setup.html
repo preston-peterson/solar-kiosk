@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar settings</title>
+<style>
+  :root { --bg:#f4f5f7; --card:#fff; --ink:#1b1f24; --muted:#5d6670; --line:#d9dde2; --accent:#1f6feb;
+          --good:#137a2f; --good-bg:#e6f4ea; --bad:#b42318; --bad-bg:#fdecea; --wait:#8a5a00; --wait-bg:#fff4dc; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111418; --card:#1b2026; --ink:#e8eaed; --muted:#9aa3ad; --line:#2e353d; --accent:#4c8dff;
+            --good:#6fd08c; --good-bg:#16301f; --bad:#ff8a80; --bad-bg:#3a1a18; --wait:#f0c36d; --wait-bg:#33290f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:17px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 26px; margin: 4px 0 4px; }
+  .lead { color: var(--muted); margin: 0 0 18px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin: 0 0 14px; }
+  h2 { font-size: 19px; margin: 0; }
+  .sub { color: var(--muted); font-size: 15px; margin: 2px 0 12px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  label { display: block; font-size: 15px; font-weight: 600; margin: 10px 0 4px; }
+  input[type=email], input[type=text], input[type=password] { width: 100%; font: inherit; padding: 11px 12px;
+         border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 12px 18px; cursor: pointer;
+           background: var(--accent); color: #fff; margin-top: 12px; }
+  button.quiet { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+  button:disabled { opacity: .6; cursor: default; }
+  .switch { display: inline-flex; align-items: center; gap: 6px; font-size: 15px; color: var(--muted); white-space: nowrap; }
+  .switch input { width: 20px; height: 20px; }
+  details { margin-top: 10px; color: var(--muted); font-size: 15px; }
+  .result { display: none; margin-top: 12px; padding: 10px 12px; border-radius: 10px; font-size: 15px; }
+  .result.ok, .result.bad, .result.wait { display: block; }
+  .result.ok { background: var(--good-bg); color: var(--good); }
+  .result.bad { background: var(--bad-bg); color: var(--bad); }
+  .result.wait { background: var(--wait-bg); color: var(--wait); }
+  .result b { display: block; }
+  .choices button { display: block; width: 100%; text-align: left; background: var(--bg); color: var(--ink); border: 1px solid var(--line); margin-top: 8px; }
+  .units { display: flex; gap: 8px; }
+  .units label { flex: 1; margin: 0; font-weight: 500; border: 1px solid var(--line); border-radius: 10px; padding: 10px; text-align: center; cursor: pointer; }
+  .units input { display: none; }
+  .units label:has(input:checked) { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .off .fields { display: none; }
+  #save { width: 100%; padding: 15px; font-size: 18px; }
+  a { color: var(--accent); }
+  #create, #enter { display: none; }
+  .gate-create #create, .gate-enter #enter { display: block; }
+  .gate-create #form, .gate-enter #form { display: none; }
+  #forgot { display: none; }
+  .local #forgot { display: inline-block; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Solar settings</h1>
+  <p class="lead">Connect to your solar, battery and weather station. Each one is tested as you go.
+    <a href="/">Back to the solar page</a></p>
+
+  <section id="create"><h2>First, create a settings password</h2>
+    <p class="sub">It keeps other people on your network out of these settings. Each computer or phone asks
+      for it once, then remembers it.</p>
+    <label for="c-pass">Password (at least 8 characters)</label><input id="c-pass" type="password" autocomplete="new-password">
+    <label for="c-again">Type it again</label><input id="c-again" type="password" autocomplete="new-password">
+    <button id="c-go">Create password</button>
+    <div class="result" role="status"></div>
+  </section>
+
+  <section id="enter"><h2>Enter the settings password</h2>
+    <p class="sub">This computer or phone will remember it.</p>
+    <label for="l-pass">Settings password</label><input id="l-pass" type="password" autocomplete="current-password">
+    <div class="row"><button id="l-go">Open settings</button>
+      <button class="quiet" id="forgot">Forgot it? Reset</button></div>
+    <p class="sub" style="margin-top:12px">Forgot it? Reset it from the solar screen itself, or run
+      <code>solar-kiosk reset-password</code> on the Pi.</p>
+    <div class="result" role="status"></div>
+  </section>
+
+  <div id="form">
+    <section id="enphase">
+      <div class="head"><div><h2>Solar panels (Enphase)</h2>
+        <p class="sub">The email and password you use in the Enphase app.</p></div>
+        <label class="switch"><input type="checkbox" data-have checked> I have this</label></div>
+      <div class="fields">
+        <label for="e-user">Email</label><input id="e-user" type="email" autocomplete="username">
+        <label for="e-pass">Password</label><input id="e-pass" type="password" autocomplete="current-password">
+        <details><summary>Advanced</summary>
+          <label for="e-host">Gateway address (found automatically if blank)</label><input id="e-host" type="text" inputmode="decimal" placeholder="e.g. 192.0.2.10">
+          <label for="e-token">Access token (only for accounts with two-step sign-in)</label><input id="e-token" type="password">
+        </details>
+        <button data-connect>Connect</button>
+        <div class="result" role="status"></div>
+        <div class="choices"></div>
+      </div>
+    </section>
+
+    <section id="franklin">
+      <div class="head"><div><h2>Battery (FranklinWH)</h2>
+        <p class="sub">The email and password you use in the FranklinWH app.</p></div>
+        <label class="switch"><input type="checkbox" data-have checked> I have this</label></div>
+      <div class="fields">
+        <label for="f-user">Email</label><input id="f-user" type="email" autocomplete="username">
+        <label for="f-pass">Password</label><input id="f-pass" type="password" autocomplete="current-password">
+        <button data-connect>Connect</button>
+        <div class="result" role="status"></div>
+      </div>
+    </section>
+
+    <section id="tempest">
+      <div class="head"><div><h2>Weather (Tempest)</h2>
+        <p class="sub">Found automatically. Nothing to type.</p></div>
+        <label class="switch"><input type="checkbox" data-have checked> I have this</label></div>
+      <div class="fields">
+        <button class="quiet" data-connect>Look for it</button>
+        <div class="result" role="status"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Units</h2>
+      <div class="units" style="margin-top:12px">
+        <label><input type="radio" name="units" value="us" checked> °F, mph</label>
+        <label><input type="radio" name="units" value="metric"> °C, km/h</label>
+      </div>
+    </section>
+
+    <button id="save">Save and start</button>
+    <div class="result" id="saved" role="status"></div>
+
+    <section style="margin-top:28px">
+      <h2>Settings password</h2>
+      <p class="sub">Changing it signs out every other computer and phone.</p>
+      <label for="p-old">Current password</label><input id="p-old" type="password" autocomplete="current-password">
+      <label for="p-new">New password</label><input id="p-new" type="password" autocomplete="new-password">
+      <label for="p-again">New password again</label><input id="p-again" type="password" autocomplete="new-password">
+      <div class="row"><button id="p-go">Change password</button><button class="quiet" id="signout">Sign out here</button></div>
+      <div class="result" role="status"></div>
+    </section>
+  </div>
+</main>
+<script>
+const found = { enphase: {}, franklin: {}, tempest: {} };
+const $ = (s, root = document) => root.querySelector(s);
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} :
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (r.status === 403) { gate('enter'); throw new Error('locked'); }
+  return r.json();
+}
+
+function show(el, kind, title, detail) {
+  el.className = 'result ' + kind;
+  el.replaceChildren();
+  const b = document.createElement('b'); b.textContent = title; el.append(b);
+  if (detail) el.append(document.createTextNode(detail));
+}
+
+function gate(kind) {
+  document.body.classList.remove('gate-create', 'gate-enter');
+  if (kind) document.body.classList.add('gate-' + kind);
+}
+
+async function auth(path, body, out, then) {
+  try {
+    const r = await api(path, body);
+    if (r.ok) then(); else show(out, 'bad', '✗ ' + r.error, '');
+  } catch (e) { if (e.message !== 'locked') show(out, 'bad', '✗ Lost contact with the solar app', ' Try again.'); }
+}
+
+$('#c-go').onclick = () => auth('/api/auth/create', { password: $('#c-pass').value, confirm: $('#c-again').value },
+  $('#create .result'), () => location.reload());
+$('#l-go').onclick = () => auth('/api/auth/login', { password: $('#l-pass').value }, $('#enter .result'), () => location.reload());
+$('#l-pass').onkeydown = e => { if (e.key === 'Enter') $('#l-go').click(); };
+$('#forgot').onclick = () => auth('/api/auth/reset', {}, $('#enter .result'), () => location.reload());
+$('#p-go').onclick = () => auth('/api/auth/change', { old: $('#p-old').value, new: $('#p-new').value, confirm: $('#p-again').value },
+  $('#p-go').closest('section').querySelector('.result'),
+  () => show($('#p-go').closest('section').querySelector('.result'), 'ok', '✓ Password changed', ' Other computers and phones will ask for the new one.'));
+$('#signout').onclick = () => auth('/api/auth/logout', {}, $('#signout').closest('section').querySelector('.result'), () => location.reload());
+
+function have(id) { return $('#' + id + ' [data-have]').checked; }
+
+for (const id of ['enphase', 'franklin', 'tempest']) {
+  const box = $('#' + id + ' [data-have]');
+  box.addEventListener('change', () => $('#' + id).classList.toggle('off', !box.checked));
+}
+
+async function connect(id, extra = {}) {
+  const sec = $('#' + id), btn = $('[data-connect]', sec), out = $('.result', sec);
+  const body = id === 'enphase'
+    ? { username: $('#e-user').value, password: $('#e-pass').value, host: $('#e-host').value,
+        token: $('#e-token').value, ...extra }
+    : id === 'franklin' ? { email: $('#f-user').value, password: $('#f-pass').value } : {};
+  btn.disabled = true;
+  show(out, 'wait', id === 'tempest' ? 'Listening for the weather station…' : 'Connecting…',
+       id === 'enphase' ? ' Looking for the gateway on your network. This takes up to a minute.' : '');
+  try {
+    const r = await api('/api/setup/' + id, body);
+    show(out, r.ok ? 'ok' : 'bad', (r.ok ? '✓ ' : '✗ ') + r.title, r.detail ? ' ' + r.detail : '');
+    if (r.ok) found[id] = r.data || {};
+    if (id === 'enphase') choices(r.data && r.data.choices);
+  } catch (e) { if (e.message !== 'locked') show(out, 'bad', '✗ Lost contact with the solar app', ' Check this device is on the home network.'); }
+  btn.disabled = false;
+}
+
+function choices(list) {
+  const box = $('#enphase .choices'); box.replaceChildren();
+  for (const g of list || []) {
+    const b = document.createElement('button');
+    b.textContent = 'Gateway ' + (g.serial || '(no serial)') + ' at ' + g.host;
+    b.onclick = () => connect('enphase', { host: g.host, serial: g.serial });
+    box.append(b);
+  }
+}
+
+for (const id of ['enphase', 'franklin', 'tempest']) $('#' + id + ' [data-connect]').onclick = () => connect(id);
+
+$('#save').onclick = async () => {
+  const out = $('#saved'), units = $('input[name=units]:checked').value;
+  const body = {
+    enphase: have('enphase') ? { username: $('#e-user').value, password: $('#e-pass').value, token: $('#e-token').value,
+      host: found.enphase.host || $('#e-host').value, serial: found.enphase.serial || '' } : null,
+    franklin: have('franklin') ? { email: $('#f-user').value, password: $('#f-pass').value,
+      gateway_id: found.franklin.gateway_id || '' } : null,
+    tempest: { enabled: have('tempest'), serial: found.tempest.serial || '' },
+    units,
+  };
+  $('#save').disabled = true;
+  try {
+    const r = await api('/api/setup/save', body);
+    if (r.ok) show(out, 'ok', '✓ Saved', r.mode === 'live' ? ' The solar page switches to your system within a minute.'
+                                                          : ' Nothing is turned on, so the solar page keeps showing the demo.');
+    else show(out, 'bad', '✗ Not saved', ' ' + r.error);
+  } catch (e) { if (e.message !== 'locked') show(out, 'bad', '✗ Lost contact with the solar app', ' Try again.'); }
+  $('#save').disabled = false;
+};
+
+(async () => {
+  let s;
+  try { s = await api('/api/setup/state'); } catch (e) { return; }
+  if (s.locked) {
+    document.body.classList.toggle('local', !!s.local);
+    gate(s.locked);
+    $(s.locked === 'create' ? '#c-pass' : '#l-pass').focus();
+    return;
+  }
+  const pw = (el, has) => { if (has) el.placeholder = 'Saved (leave blank to keep it)'; };
+  $('#e-user').value = s.enphase.username; $('#e-host').value = s.enphase.host; pw($('#e-pass'), s.enphase.has_password);
+  found.enphase = { host: s.enphase.host, serial: s.enphase.serial };
+  $('#f-user').value = s.franklin.email; pw($('#f-pass'), s.franklin.has_password);
+  found.franklin = { gateway_id: s.franklin.gateway_id };
+  found.tempest = { serial: s.tempest.serial };
+  for (const [id, off] of [['enphase', s.enphase.off], ['franklin', s.franklin.off], ['tempest', !s.tempest.enabled]]) {
+    $('#' + id + ' [data-have]').checked = !off; $('#' + id).classList.toggle('off', off);
+  }
+  $('input[name=units][value=' + s.units + ']').checked = true;
+  if (s.tempest.enabled && !s.tempest.serial) connect('tempest');
+})();
+</script>
+</body>
+</html>

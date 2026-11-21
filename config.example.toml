@@ -1,0 +1,23 @@
+# solar-kiosk settings, normally written by the app's setup page. To set it up by hand instead, copy this
+# to ~/.config/solar-kiosk/config.toml. Logins go in secrets.toml next to it (see secrets-example.toml).
+
+[enphase]
+host = "192.0.2.10"          # optional: the IQ Gateway is found on the network automatically
+serial = ""                  # filled in by the app; used to find the gateway again if its address changes
+poll_seconds = 15
+
+[franklin]
+source = "cloud"             # "cloud", or "off" to run without the aGate
+gateway_id = ""              # optional: empty uses the first aGate on the FranklinWH account
+poll_seconds = 30            # the cloud updates about every 30 s; faster gains nothing
+
+[tempest]
+enabled = true               # listens for the hub's UDP broadcast; must be on the hub's network
+port = 50222
+serial = ""                  # only needed if more than one Tempest is on the network, e.g. "ST-00000000"
+
+[display]
+units = "us"                 # "us" (°F, mph, mi) or "metric"
+
+[paths]
+# state_dir = "~/.local/state/solar-kiosk"   # saved solar baseline and the cached Enphase token

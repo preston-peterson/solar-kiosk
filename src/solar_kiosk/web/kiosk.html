@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar</title>
+<!-- A plain placeholder screen. It's replaced by the layout chosen from docs/mockups/kiosk-mockups.html. -->
+<style>
+  :root { --bg:#0e1116; --card:#181d24; --ink:#eef1f4; --muted:#9aa3ad; --solar:#eda100; --home:#3987e5;
+          --batt:#199e70; --grid:#9085e9; --warn:#f0c36d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+               font-family: system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+  .wrap { display: grid; grid-template-columns: 1fr auto; height: 100vh; gap: 2vw; padding: 3vw; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr auto; gap: 2vw; min-width: 0; }
+  .tile { background: var(--card); border-radius: 1.6vw; padding: 2vw; display: flex; flex-direction: column; justify-content: space-between; }
+  .tile h2 { margin: 0; font-size: 2vw; font-weight: 600; color: var(--muted); display: flex; align-items: center; gap: .8vw; }
+  .tile h2 i { width: 1.2vw; height: 1.2vw; border-radius: 50%; display: inline-block; }
+  .big { font-size: 7vw; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+  .big small { font-size: 2.6vw; font-weight: 600; color: var(--muted); margin-left: .5vw; }
+  .note { font-size: 1.8vw; color: var(--muted); min-height: 1.4em; }
+  .strip { grid-column: 1 / -1; font-size: 1.9vw; color: var(--muted); display: flex; gap: 3vw; flex-wrap: wrap; }
+  .strip b { color: var(--ink); font-weight: 600; }
+  .side { width: 24vw; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1.4vw; text-align: center; }
+  .side img { width: 100%; max-width: 20vw; border-radius: 1vw; background: #fff; }
+  .side h3 { font-size: 2.2vw; margin: 0; }
+  .side p { font-size: 1.6vw; color: var(--muted); margin: 0; }
+  .side .warn { color: var(--warn); }
+  .corner { position: fixed; right: 1.2vw; bottom: 1vw; }
+  .btn { display: inline-block; font-size: max(14px, 1.3vw); color: var(--ink); text-decoration: none;
+         border: 1px solid #3a424c; border-radius: 999px; padding: .5em 1.1em; background: var(--card); }
+  .side .btn { font-size: max(16px, 1.6vw); }
+  .hidden { display: none !important; }
+  .wrap.full { grid-template-columns: 1fr; }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="tiles">
+    <div class="tile"><h2><i style="background:var(--solar)"></i>Solar</h2><div class="big" id="solar">—</div><div class="note" id="solar-note"></div></div>
+    <div class="tile"><h2><i style="background:var(--home)"></i>Home</h2><div class="big" id="home">—</div><div class="note" id="home-note"></div></div>
+    <div class="tile"><h2><i style="background:var(--batt)"></i>Battery</h2><div class="big" id="batt">—</div><div class="note" id="batt-note"></div></div>
+    <div class="tile"><h2><i style="background:var(--grid)"></i>Grid</h2><div class="big" id="grid">—</div><div class="note" id="grid-note"></div></div>
+    <div class="strip" id="strip"></div>
+  </div>
+  <div class="side" id="side">
+    <h3 id="side-title">Demo</h3>
+    <p id="side-text">These numbers are made up.</p>
+    <a class="btn" href="/setup">Open settings</a>
+    <img id="qr" alt="QR code that opens the settings">
+    <p>Or scan with a phone's camera.</p>
+    <p id="addr"></p>
+  </div>
+</div>
+<a class="corner btn hidden" id="corner" href="/setup">Settings</a>
+<script>
+const $ = id => document.getElementById(id);
+const kw = w => w == null ? '—' : (Math.abs(w) / 1000).toFixed(1);
+const big = (id, w) => { $(id).innerHTML = w == null ? '—' : kw(w) + '<small>kW</small>'; };
+let units = 'us';
+const temp = c => c == null ? '—' : units === 'us' ? Math.round(c * 9 / 5 + 32) + '°F' : c.toFixed(1) + '°C';
+const speed = ms => ms == null ? '—' : units === 'us' ? Math.round(ms * 2.237) + ' mph' : Math.round(ms * 3.6) + ' km/h';
+const dist = km => units === 'us' ? Math.round(km * 0.621) + ' mi' : Math.round(km) + ' km';
+
+function render(d) {
+  units = d.units;
+  const s = d.snapshot, needs = d.mode === 'demo' || d.attention.length;
+  $('side').classList.toggle('hidden', !needs);
+  $('wrap').classList.toggle('full', !needs);
+  $('corner').classList.toggle('hidden', !!needs);
+  $('side-title').textContent = d.attention.length ? 'Needs attention' : 'Demo';
+  $('side-text').textContent = d.attention.length ? d.attention.join(' ') : 'These numbers are made up until the screen is set up.';
+  $('side-text').className = d.attention.length ? 'warn' : '';
+  $('addr').textContent = 'http://' + d.setup_address + '/setup';
+  if (!s) return;
+  big('solar', s.solar.watts); $('solar-note').textContent = s.solar_today_kwh != null ? kw(s.solar_today_kwh * 1000) + ' kWh today' : '';
+  big('home', s.home.watts); $('home-note').textContent = s.home.source && !s.home.source.startsWith('measured') ? s.home.source : '';
+  $('batt').innerHTML = s.soc_pct == null ? '—' : Math.round(s.soc_pct) + '<small>%</small>';
+  const b = s.battery_w || 0;
+  $('batt-note').textContent = s.soc_pct == null ? (s.franklin_error || '') : b < -50 ? 'Charging ' + kw(b) + ' kW' : b > 50 ? 'Powering the home ' + kw(b) + ' kW' : 'Idle';
+  if (s.off_grid) { $('grid').textContent = 'Down'; $('grid-note').textContent = 'Running on battery'; }
+  else {
+    big('grid', s.grid.watts);
+    const g = s.grid.watts;
+    $('grid-note').textContent = g == null ? '' : Math.abs(g) < 50 ? 'Idle' : g > 0 ? 'Buying' : 'Selling';
+  }
+  const w = s.weather, parts = [];
+  if (w) {
+    parts.push('<b>' + temp(w.temp_c) + '</b>', 'Wind <b>' + speed(w.wind_ms) + '</b>',
+               w.sun_wm2 ? 'Sun <b>' + Math.round(w.sun_wm2) + ' W/m²</b>' : 'Sun down');
+    if (w.rain_today_mm) parts.push('Rain today <b>' + (units === 'us' ? (w.rain_today_mm / 25.4).toFixed(2) + ' in' : w.rain_today_mm.toFixed(1) + ' mm') + '</b>');
+    if (w.last_strike_km != null) parts.push('Lightning <b>' + dist(w.last_strike_km) + '</b>');
+  }
+  parts.push(new Date(s.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }));
+  $('strip').innerHTML = parts.map(p => '<span>' + p + '</span>').join('');
+}
+
+async function tick() {
+  try { render(await (await fetch('/api/now')).json()); } catch (e) { /* the server is restarting */ }
+}
+function qr() { $('qr').src = '/qr.svg?t=' + Date.now(); }
+tick(); qr();
+setInterval(tick, 5000);
+setInterval(qr, 10 * 60 * 1000);
+</script>
+</body>
+</html>

@@ -8,3 +8,37 @@ AGENT_GUARDRAILS.md
 *.local.yaml
 config.local.*
 secrets.*
+
+# --- Python ---
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# --- solar-kiosk: real config, secrets and data never go in the repo ---
+# (config.example.toml and secrets-example.toml are the tracked templates)
+/config.toml
+*.db
+*.db-journal
+*.db-wal
+enphase-token*
+
+# --- Editors and OS clutter ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# --- Tool caches and coverage ---
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Local audit reports (maintainer-only) ---
+audits/
