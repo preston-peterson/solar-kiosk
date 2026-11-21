@@ -1,0 +1,25 @@
+name: Feature idea
+description: Something you'd like the solar page to show or do.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: Describe what you'd see or be able to do.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it help?
+      description: The situation where you'd use it.
+  - type: checkboxes
+    id: devices
+    attributes:
+      label: Which devices does it involve?
+      options:
+        - label: Enphase IQ Gateway
+        - label: FranklinWH aGate
+        - label: WeatherFlow Tempest
+        - label: Something else

@@ -1,0 +1,48 @@
+name: Bug report
+description: Something isn't working as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. **Please don't paste passwords, tokens, email addresses, IP addresses,
+        serial numbers or screenshots that show them.** Replace them with something like `192.0.2.10` or
+        `<serial>`. Security problems go through private reporting (Security tab), not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How is it installed?
+      options:
+        - One-line install on my own Raspberry Pi
+        - The ready-made kiosk image
+        - From source (uv run)
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Run `solar-kiosk --version` on the Pi.
+  - type: checkboxes
+    id: devices
+    attributes:
+      label: Which devices are involved?
+      options:
+        - label: Enphase IQ Gateway
+        - label: FranklinWH aGate
+        - label: WeatherFlow Tempest
+        - label: None (demo mode)
+  - type: textarea
+    id: logs
+    attributes:
+      label: Messages or logs
+      description: Error text from the page or from the app's log, with personal details removed.
+      render: text
