@@ -95,6 +95,11 @@ def main(argv: list[str] | None = None) -> int:
     r = sub.add_parser("reset-password", help="forget the settings password (the next visitor sets a new one)")
     r.add_argument("--config", type=Path, help=f"settings file (default {cfg.default_config_path()})")
 
+    a = sub.add_parser("check-agate", help="read a FranklinWH aGate over Modbus and show what solar-kiosk sees "
+                                           "(read-only)")
+    a.add_argument("address", help="the aGate's address on the home network, e.g. 192.0.2.20")
+    a.add_argument("--port", type=int, default=502)
+
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING,
                         format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -105,6 +110,10 @@ def main(argv: list[str] | None = None) -> int:
         Auth((args.config or cfg.default_config_path()).with_name("auth.json")).reset()
         print("The settings password is gone. The next person to open Settings creates a new one.")
         return 0
+    if args.command == "check-agate":
+        from .agate_check import check
+
+        return asyncio.run(check(args.address, port=args.port))
     return asyncio.run(serve(args) if args.command == "serve" else watch(args))
 
 

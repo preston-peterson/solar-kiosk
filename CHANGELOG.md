@@ -13,6 +13,9 @@ All notable changes to this project are documented here. The format follows
   token lasts a year, and the solar page reminds you a month before it runs out. Email and password still work.
 - Every device on the settings page now has numbered, step-by-step instructions, and a new guide,
   `docs/setup.md`, covers setup from start to finish, with what to do about each error message.
+- `solar-kiosk check-agate ADDRESS`: reads a FranklinWH aGate directly over Modbus TCP (no login, read-only),
+  and shows what solar-kiosk would make of it, to check against the FranklinWH app before switching over. It
+  never prints the serial number. The reader behind it only ever sends Modbus read requests.
 
 ### Fixed
 
