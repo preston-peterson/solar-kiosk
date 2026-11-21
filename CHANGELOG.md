@@ -22,3 +22,5 @@ All notable changes to this project are documented here. The format follows
   Pi's own screen or with `solar-kiosk reset-password`.
 - `solar-kiosk watch`: readings printed as text.
 - Security and privacy notes: `docs/security.md`.
+- GitHub Actions: the tests run on Python 3.11 and 3.13 for every push. Pushing a `vX.Y.Z` tag runs the tests,
+  then publishes a release with the wheel, the source archive and `SHA256SUMS`.

@@ -1,0 +1,36 @@
+# Runs the test suite on every push and pull request, and for the release workflow before it publishes.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    name: pytest (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 = Raspberry Pi OS Bookworm, 3.13 = Raspberry Pi OS Trixie
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d  # v10.4.0
+      - name: Install (exactly as locked)
+        run: uv sync --locked --python ${{ matrix.python }}
+      - name: Run the tests
+        run: uv run --python ${{ matrix.python }} pytest -q
