@@ -19,12 +19,28 @@ reasonable for a home app. It also covers how to reduce them further if you want
 
 ## What it stores, and where
 
-| File (on the Pi) | What's in it | Who can read it |
+When installed with `install.sh`, the app runs as its own system user, `solar-kiosk`, which has no login and no
+password. Its files live in `/var/lib/solar-kiosk/`, a folder only that user can open (mode 700). Not even the
+Pi's desktop user can read them without administrator rights. (Run straight from the source code instead, the
+same files sit in `~/.config/solar-kiosk/` and `~/.local/state/solar-kiosk/`.)
+
+| File (installed on a Pi) | What's in it | Who can read it |
 |---|---|---|
-| `~/.config/solar-kiosk/secrets.toml` | Enphase email and password (or token); FranklinWH email and password | Only the app's user (file mode 600) |
-| `~/.config/solar-kiosk/auth.json` | The settings password **as a scrypt hash** (never the password), and the current sign-in key | Only the app's user (600) |
-| `~/.local/state/solar-kiosk/enphase-token` | The access token the Enphase gateway issued, cached so the app doesn't sign in to Enphase on every start | Only the app's user (600) |
-| `~/.config/solar-kiosk/config.toml` | Gateway address, serial numbers, units: no passwords | Anyone with an account on the Pi |
+| `/var/lib/solar-kiosk/config/solar-kiosk/secrets.toml` | Enphase email and password (or token); FranklinWH email and password | Only the `solar-kiosk` user (file mode 600) |
+| `/var/lib/solar-kiosk/config/solar-kiosk/auth.json` | The settings password **as a scrypt hash** (never the password), and the current sign-in key | Only `solar-kiosk` (600) |
+| `/var/lib/solar-kiosk/state/solar-kiosk/enphase-token` | The access token the Enphase gateway issued, cached so the app doesn't sign in to Enphase on every start | Only `solar-kiosk` (600) |
+| `/var/lib/solar-kiosk/config/solar-kiosk/config.toml` | Gateway address, serial numbers, units: no passwords | Only `solar-kiosk` (inside its 700 folder) |
+
+The program itself is in `/opt/solar-kiosk/`, owned by root, so the app can't modify its own code. The service
+also runs with systemd's protections:
+
+- it can only write to its own folder
+- it can't see users' home folders, hardware devices or other programs running on the Pi
+- it has no special system rights, can't gain new ones, and can't make the system calls only administrators
+  need
+
+systemd's own check (`systemd-analyze security solar-kiosk`) rates the service 1.1 on its 0 to 10 exposure
+scale, where lower is safer. What's left is the network access the app needs to do its job.
 
 The app writes these files itself; nobody has to edit them. It refuses to start if the logins file becomes
 readable by other users. Files are replaced whole, so a power cut can't leave one half-written.
@@ -36,7 +52,7 @@ readable by other users. Files are replaced whole, so a power cut can't leave on
 | Anyone on your home network | View the solar page: live power, today's totals, weather. See the settings page's password prompt. |
 | Someone with the settings password | Change the logins and other settings. They still can't see saved passwords: the page only says one is saved. |
 | Someone at the Pi's own screen | Reset the settings password (see below). |
-| Someone with the Pi's SD card, or a login on the Pi | Everything, including reading the Enphase and FranklinWH logins. |
+| Someone with administrator rights on the Pi, or its SD card | Everything, including reading the Enphase and FranklinWH logins. |
 
 ## How sign-in works
 
@@ -100,6 +116,7 @@ looking after it.
 - **To reduce it:**
   - keep the Pi inside your home
   - use a password for Enphase and FranklinWH that you don't use anywhere else
+  - give your own login on the Pi a strong password: anyone with administrator rights on the Pi can read the logins
   - if the Pi or its card is lost or stolen, change both passwords
 
 **3. Anyone on your network can view the solar page.**
@@ -122,7 +139,8 @@ looking after it.
 **5. Anyone at the Pi's own screen can reset the settings password.**
 
 - **Why it's by design:** standing at the device is proof of being in the home, just like the reset button on
-  a router. It's how someone who forgot the password gets back in without a technician.
+  a router. It's how someone who forgot the password gets back in without a technician. (Strictly, the reset is allowed for any request that comes from the Pi itself, including programs running on
+  it. That's the same circle of trust as the people who can sit at it.)
 
 **6. A browser stays signed in for a long time.**
 
@@ -140,6 +158,25 @@ looking after it.
 
 - **Risk:** if FranklinWH's service is down or changes, the battery readings stop. The solar, home and grid
   readings from the Enphase gateway keep working.
+
+**9. Updates install themselves overnight.**
+
+- **What's checked:**
+  - The one-line command downloads `install.sh` from the **latest published release**, and the installer and
+  the nightly update only install published releases, never work in progress.
+  - Every downloaded file must match the release's `SHA256SUMS`.
+  - Each Python package must match the hash locked for that release, and only ready-built packages are
+    accepted, so nothing is compiled on the Pi.
+  - The `uv` installer it downloads must match a hash written into `install.sh` itself.
+  - If a new version doesn't start properly, the Pi goes back to the previous version by itself and doesn't
+    retry the broken one.
+- **Risk:** the checksums come from the same GitHub release as the files. They catch damaged or swapped
+  downloads, but not someone who has taken over the project's GitHub account and published a bad release.
+- **Why it's acceptable:** that account is protected with two-factor sign-in, and `main` can't be rewritten or
+  force-pushed. The trade-off is that fixes, including security fixes, reach every Pi within a day, without
+  anyone having to remember to update.
+- **To reduce it:** turn nightly updates off (`sudo /opt/solar-kiosk/install.sh --no-auto-update`) and update
+  by hand after reading the release notes.
 
 ## Never put it on the internet
 

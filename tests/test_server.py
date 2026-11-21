@@ -61,6 +61,8 @@ def test_demo_until_set_up(tmp_path):
         assert 'xmlns="http://www.w3.org/2000/svg"' in await (await client.get("/qr.svg")).text()
         assert "Solar" in await (await client.get("/")).text()
         assert app.setup_url() == "http://192.0.2.5:8080/setup"  # the QR is only a link, not a key
+        health = await (await client.get("/api/health")).json()
+        assert health["ok"] and health["mode"] == "demo" and health["version"]
 
     with_client(tmp_path, test)
 

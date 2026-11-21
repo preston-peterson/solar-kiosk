@@ -18,6 +18,25 @@ something to expose to the internet. It runs on a Raspberry Pi on your home netw
 **Status:** early. It runs, finds the devices, and has a phone setup page. The final screen design is
 still being picked from the mockups: [`docs/mockups/kiosk-mockups.html`](docs/mockups/kiosk-mockups.html).
 
+## Install on a Raspberry Pi
+
+On a Raspberry Pi 4 or 5 running **Raspberry Pi OS (64-bit)**, Lite or Desktop, open a terminal and run:
+
+```sh
+curl -fsSL https://github.com/preston-peterson/solar-kiosk/releases/latest/download/install.sh | bash
+```
+
+It installs the latest release and starts it in the background, then prints the address to open from any
+computer or phone on your network.
+
+- **Full screen:** if the Pi has a desktop and a screen, it also opens the solar page full screen at login.
+- **Updates:** it updates itself every night around 3 am, and goes back to the previous version if an update
+  doesn't start properly.
+- **Options:** `... | bash -s -- --help`, for example `--no-kiosk`, `--no-auto-update` or `--port 8081`.
+- **Remove:** `sudo /opt/solar-kiosk/install.sh --uninstall`. This keeps the settings; add `--purge` to delete
+  them too.
+- **Forgot the settings password?** Run `solar-kiosk reset-password` on the Pi.
+
 ## Try it without any hardware
 
 ```sh

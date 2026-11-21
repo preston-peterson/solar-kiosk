@@ -1,5 +1,5 @@
-# Publishes a release when a version tag (vX.Y.Z) is pushed: tests first, then the wheel, the source archive
-# and SHA256SUMS are attached to a GitHub release. Installs and the nightly updater only use these releases,
+# Publishes a release when a version tag (vX.Y.Z) is pushed: tests first, then the wheel, the source archive,
+# the locked requirements (with hashes), install.sh and SHA256SUMS are attached to a GitHub release. Installs and the nightly updater only use these releases,
 # never the latest commit on main, and check files against SHA256SUMS.
 name: Release
 
@@ -41,9 +41,11 @@ jobs:
             echo "::error::CHANGELOG.md has no section for $VERSION"; exit 1
           fi
 
-      - name: Build and checksum
+      - name: Build, add the locked requirements and the installer, checksum
         run: |
           uv build
+          uv export --frozen --no-dev --no-emit-project --format requirements-txt -o dist/requirements.txt
+          cp install.sh dist/install.sh
           (cd dist && sha256sum -- * > SHA256SUMS && cat SHA256SUMS)
 
       - name: Create the GitHub release

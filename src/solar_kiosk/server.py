@@ -21,7 +21,7 @@ from typing import Any
 import segno
 from aiohttp import web
 
-from . import checks
+from . import __version__, checks
 from . import config as cfg
 from .auth import Auth, AuthError
 from .models import Snapshot
@@ -287,6 +287,10 @@ def make_web_app(app: App) -> web.Application:
         buf = io.BytesIO()  # a standalone SVG (with its namespace), so it works as an <img>
         segno.make(app.setup_url(), error="m").save(buf, kind="svg", scale=8, border=2, dark="#000", light="#fff")
         return web.Response(body=buf.getvalue(), content_type="image/svg+xml")
+
+    @routes.get("/api/health")
+    async def health(request):  # the installer checks this after starting a new version
+        return reply({"ok": True, "version": __version__, "mode": app.mode})
 
     @routes.get("/api/now")
     async def now(request):
