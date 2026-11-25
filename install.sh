@@ -80,15 +80,25 @@ as_root() { "${SUDO[@]}" "$@"; }
 # --- checks ----------------------------------------------------------------------------------------------
 
 ARCH=""
+NEEDS_64BIT="This is a 32-bit system. solar-kiosk needs a 64-bit OS: install Raspberry Pi OS (64-bit) on a Pi 4 or 5."
 check_system() {
   [ "$(uname -s)" = Linux ] || die "solar-kiosk runs on Linux (Raspberry Pi OS)."
   [ -d /run/systemd/system ] || die "This system doesn't use systemd, which solar-kiosk needs to run in the background."
   case "$(uname -m)" in
     aarch64|arm64) ARCH=aarch64 ;;
     x86_64|amd64)  ARCH=x86_64 ;;
-    armv7l|armv6l) die "This is a 32-bit system. solar-kiosk needs a 64-bit OS: install Raspberry Pi OS (64-bit) on a Pi 4 or 5." ;;
+    armv7l|armv6l) die "$NEEDS_64BIT" ;;
     *)             die "Unsupported processor: $(uname -m)." ;;
   esac
+  # `uname -m` describes the kernel, and a 64-bit kernel can run a 32-bit system: Raspberry Pi OS (32-bit)
+  # does that on a Pi 4 or 5. uv and the Python packages have to match the system, so ask it as well.
+  if is_32bit_system; then die "$NEEDS_64BIT"; fi
+}
+is_32bit_system() {
+  case "$(dpkg --print-architecture 2>/dev/null || true)" in
+    armhf|armel|i386) return 0 ;;
+  esac
+  [ "$(getconf LONG_BIT 2>/dev/null || true)" = 32 ]
 }
 
 install_packages() {  # install_packages pkg...  (only the ones that are missing)

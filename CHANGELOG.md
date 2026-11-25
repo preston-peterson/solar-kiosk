@@ -21,6 +21,8 @@ All notable changes to this project are documented here. The format follows
 
 - After saving, reopening Settings showed Enphase and FranklinWH as switched off until the app restarted, and
   saving again would really have switched them off.
+- On a Raspberry Pi 4 or 5 running the 32-bit Raspberry Pi OS, the installer now stops straight away and says it
+  needs the 64-bit one. Before, it took the 64-bit path and failed partway through with a confusing error.
 
 ## [0.1.0] - 2026-11-21
 
